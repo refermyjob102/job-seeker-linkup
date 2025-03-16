@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2, ChevronLeft } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const HowItWorks = () => {
