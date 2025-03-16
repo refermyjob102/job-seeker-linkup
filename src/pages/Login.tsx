@@ -1,5 +1,6 @@
 
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { 
   Card, 
   CardContent, 
@@ -11,16 +12,36 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isLoading, error, clearError } = useAuth();
+  const { toast } = useToast();
+  
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Get the redirect path from location state or default to dashboard
+  const from = location.state?.from || "/app";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we would handle authentication here
-    // For now, we'll just navigate to the dashboard
-    navigate("/app");
+    
+    try {
+      await login(email, password);
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+        variant: "default",
+      });
+      navigate(from);
+    } catch (err) {
+      // Error is handled in the auth context
+    }
   };
 
   return (
@@ -37,12 +58,27 @@ const Login = () => {
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
+          {error && (
+            <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
+              {error}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="john@example.com" required />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="john@example.com" 
+                required 
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clearError();
+                }}
+              />
             </div>
             
             <div className="space-y-2">
@@ -52,11 +88,27 @@ const Login = () => {
                   Forgot password?
                 </Link>
               </div>
-              <Input id="password" type="password" required />
+              <Input 
+                id="password" 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  clearError();
+                }}
+              />
             </div>
             
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
             
             <div className="relative my-4">

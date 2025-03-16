@@ -13,23 +13,64 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 const Register = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { register, isLoading, error, clearError } = useAuth();
+  const { toast } = useToast();
+  
   const initialRole = new URLSearchParams(location.search).get("role") || "seeker";
   
-  const [role, setRole] = useState<"seeker" | "referrer">(initialRole as "seeker" | "referrer");
-  const [isReferrer, setIsReferrer] = useState(role === "referrer");
+  const [role, setRole] = useState<UserRole>(initialRole as UserRole);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [company, setCompany] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  
+  const isReferrer = role === "referrer";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, we would handle form submission to a backend API
-    // For now, we'll just navigate to the dashboard
-    navigate("/app");
+    
+    if (!termsAccepted) {
+      toast({
+        title: "Terms Required",
+        description: "You must accept the terms and conditions to register.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await register({
+        firstName,
+        lastName,
+        email,
+        role,
+        company: isReferrer ? company : undefined,
+        jobTitle: isReferrer ? jobTitle : undefined,
+      }, password);
+      
+      toast({
+        title: "Registration successful!",
+        description: "Your account has been created.",
+        variant: "default",
+      });
+      
+      navigate("/app");
+    } catch (err) {
+      // Error is handled in auth context
+    }
   };
 
   return (
@@ -46,12 +87,17 @@ const Register = () => {
           <CardDescription className="text-center">
             Enter your information to create your account
           </CardDescription>
+          {error && (
+            <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
+              {error}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Tabs defaultValue={initialRole} onValueChange={(value) => {
-              setRole(value as "seeker" | "referrer");
-              setIsReferrer(value === "referrer");
+              setRole(value as UserRole);
+              clearError();
             }}>
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="seeker">Job Seeker</TabsTrigger>
@@ -62,40 +108,95 @@ const Register = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First name</Label>
-                    <Input id="firstName" placeholder="John" required />
+                    <Input 
+                      id="firstName" 
+                      placeholder="John" 
+                      required 
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value);
+                        clearError();
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last name</Label>
-                    <Input id="lastName" placeholder="Doe" required />
+                    <Input 
+                      id="lastName" 
+                      placeholder="Doe" 
+                      required 
+                      value={lastName}
+                      onChange={(e) => {
+                        setLastName(e.target.value);
+                        clearError();
+                      }}
+                    />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="john@example.com" required />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="john@example.com" 
+                    required 
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearError();
+                    }}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required />
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    required 
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      clearError();
+                    }}
+                  />
                 </div>
                 
                 {isReferrer && (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="company">Company</Label>
-                      <Input id="company" placeholder="Google, Meta, etc." required={isReferrer} />
+                      <Input 
+                        id="company" 
+                        placeholder="Google, Meta, etc." 
+                        required={isReferrer} 
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                      />
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="jobTitle">Job Title</Label>
-                      <Input id="jobTitle" placeholder="Software Engineer, Product Manager, etc." required={isReferrer} />
+                      <Input 
+                        id="jobTitle" 
+                        placeholder="Software Engineer, Product Manager, etc." 
+                        required={isReferrer} 
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                      />
                     </div>
                   </>
                 )}
                 
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="terms" required />
+                  <Checkbox 
+                    id="terms" 
+                    checked={termsAccepted}
+                    onCheckedChange={(checked) => {
+                      setTermsAccepted(checked === true);
+                    }}
+                  />
                   <Label htmlFor="terms" className="text-sm">
                     I agree to the{" "}
                     <Link to="#" className="text-primary hover:underline">
@@ -110,8 +211,15 @@ const Register = () => {
               </div>
             </Tabs>
             
-            <Button type="submit" className="w-full">
-              Create Account
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </Button>
           </form>
         </CardContent>
