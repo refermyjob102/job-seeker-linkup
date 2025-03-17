@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import UpdateReferralStatusModal from "@/components/UpdateReferralStatusModal";
 
 // Mock referral data
-const mockReferrals = [
+const initialReferrals = [
   {
     id: "1",
     company: "Google",
@@ -52,7 +54,7 @@ const mockReferrals = [
 ];
 
 // Mock outgoing referrals (for referrers)
-const mockOutgoingReferrals = [
+const initialOutgoingReferrals = [
   {
     id: "4",
     company: "Google",
@@ -82,7 +84,12 @@ const mockOutgoingReferrals = [
 const Referrals = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>(user?.role === "referrer" ? "outgoing" : "all");
+  const [referrals, setReferrals] = useState(initialReferrals);
+  const [outgoingReferrals, setOutgoingReferrals] = useState(initialOutgoingReferrals);
+  const [selectedReferral, setSelectedReferral] = useState<(typeof initialOutgoingReferrals)[0] | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -92,9 +99,52 @@ const Referrals = () => {
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Accepted</Badge>;
       case "rejected":
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+      case "needs_info":
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Needs Info</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
+  };
+
+  const handleOpenStatusModal = (referral: typeof initialOutgoingReferrals[0]) => {
+    setSelectedReferral(referral);
+    setIsUpdateModalOpen(true);
+  };
+
+  const handleUpdateStatus = (status: string, feedback?: string) => {
+    if (!selectedReferral) return;
+
+    // Update the referral status in our state
+    const updatedReferrals = outgoingReferrals.map(ref => 
+      ref.id === selectedReferral.id 
+        ? { ...ref, status } 
+        : ref
+    );
+    
+    setOutgoingReferrals(updatedReferrals);
+    
+    // In a real app, we would also send a notification to the applicant
+    toast({
+      title: "Referral Status Updated",
+      description: `You've updated the status for ${selectedReferral.applicant.name}'s referral request.`,
+    });
+    
+    // If feedback was provided, we would also send it to the applicant in a real app
+    if (feedback && feedback.trim()) {
+      console.log(`Feedback for ${selectedReferral.applicant.name}: ${feedback}`);
+    }
+  };
+
+  const handleSendFollowUp = (referrerId: string) => {
+    navigate(`/app/chat/${referrerId}`);
+  };
+
+  const handleSendThanks = (referrerId: string) => {
+    navigate(`/app/chat/${referrerId}`);
+  };
+
+  const handleFindOthers = () => {
+    navigate("/app/companies");
   };
 
   return (
@@ -129,8 +179,8 @@ const Referrals = () => {
         {user?.role === "seeker" ? (
           <>
             <TabsContent value="all" className="space-y-4">
-              {mockReferrals.length > 0 ? (
-                mockReferrals.map(referral => (
+              {referrals.length > 0 ? (
+                referrals.map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -180,8 +230,8 @@ const Referrals = () => {
               )}
             </TabsContent>
             <TabsContent value="pending" className="space-y-4">
-              {mockReferrals.filter(r => r.status === "pending").length > 0 ? (
-                mockReferrals.filter(r => r.status === "pending").map(referral => (
+              {referrals.filter(r => r.status === "pending").length > 0 ? (
+                referrals.filter(r => r.status === "pending").map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -208,7 +258,7 @@ const Referrals = () => {
                       <p className="text-sm text-muted-foreground">
                         Requested on {new Date(referral.date).toLocaleDateString()}
                       </p>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/app/chat/${referral.referrer.id}`)}>
+                      <Button variant="outline" size="sm" onClick={() => handleSendFollowUp(referral.referrer.id)}>
                         Send Follow-up
                       </Button>
                     </CardFooter>
@@ -223,8 +273,8 @@ const Referrals = () => {
               )}
             </TabsContent>
             <TabsContent value="accepted" className="space-y-4">
-              {mockReferrals.filter(r => r.status === "accepted").length > 0 ? (
-                mockReferrals.filter(r => r.status === "accepted").map(referral => (
+              {referrals.filter(r => r.status === "accepted").length > 0 ? (
+                referrals.filter(r => r.status === "accepted").map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -251,7 +301,7 @@ const Referrals = () => {
                       <p className="text-sm text-muted-foreground">
                         Requested on {new Date(referral.date).toLocaleDateString()}
                       </p>
-                      <Button size="sm" onClick={() => navigate(`/app/chat/${referral.referrer.id}`)}>
+                      <Button size="sm" onClick={() => handleSendThanks(referral.referrer.id)}>
                         Send Thanks
                       </Button>
                     </CardFooter>
@@ -266,8 +316,8 @@ const Referrals = () => {
               )}
             </TabsContent>
             <TabsContent value="rejected" className="space-y-4">
-              {mockReferrals.filter(r => r.status === "rejected").length > 0 ? (
-                mockReferrals.filter(r => r.status === "rejected").map(referral => (
+              {referrals.filter(r => r.status === "rejected").length > 0 ? (
+                referrals.filter(r => r.status === "rejected").map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -294,7 +344,7 @@ const Referrals = () => {
                       <p className="text-sm text-muted-foreground">
                         Requested on {new Date(referral.date).toLocaleDateString()}
                       </p>
-                      <Button variant="outline" size="sm" onClick={() => navigate("/app/companies")}>
+                      <Button variant="outline" size="sm" onClick={handleFindOthers}>
                         Find Others
                       </Button>
                     </CardFooter>
@@ -312,8 +362,8 @@ const Referrals = () => {
         ) : (
           <>
             <TabsContent value="outgoing" className="space-y-4">
-              {mockOutgoingReferrals.length > 0 ? (
-                mockOutgoingReferrals.map(referral => (
+              {outgoingReferrals.length > 0 ? (
+                outgoingReferrals.map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -340,11 +390,18 @@ const Referrals = () => {
                         Submitted on {new Date(referral.date).toLocaleDateString()}
                       </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}
+                        >
                           Message
                         </Button>
                         {referral.status === "pending" && (
-                          <Button size="sm">
+                          <Button 
+                            size="sm"
+                            onClick={() => handleOpenStatusModal(referral)}
+                          >
                             Update Status
                           </Button>
                         )}
@@ -361,8 +418,8 @@ const Referrals = () => {
               )}
             </TabsContent>
             <TabsContent value="pending" className="space-y-4">
-              {mockOutgoingReferrals.filter(r => r.status === "pending").length > 0 ? (
-                mockOutgoingReferrals.filter(r => r.status === "pending").map(referral => (
+              {outgoingReferrals.filter(r => r.status === "pending").length > 0 ? (
+                outgoingReferrals.filter(r => r.status === "pending").map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -389,10 +446,17 @@ const Referrals = () => {
                         Submitted on {new Date(referral.date).toLocaleDateString()}
                       </p>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}
+                        >
                           Message
                         </Button>
-                        <Button size="sm">
+                        <Button 
+                          size="sm"
+                          onClick={() => handleOpenStatusModal(referral)}
+                        >
                           Update Status
                         </Button>
                       </div>
@@ -408,8 +472,8 @@ const Referrals = () => {
               )}
             </TabsContent>
             <TabsContent value="accepted" className="space-y-4">
-              {mockOutgoingReferrals.filter(r => r.status === "accepted").length > 0 ? (
-                mockOutgoingReferrals.filter(r => r.status === "accepted").map(referral => (
+              {outgoingReferrals.filter(r => r.status === "accepted").length > 0 ? (
+                outgoingReferrals.filter(r => r.status === "accepted").map(referral => (
                   <Card key={referral.id}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between">
@@ -435,7 +499,11 @@ const Referrals = () => {
                       <p className="text-sm text-muted-foreground">
                         Submitted on {new Date(referral.date).toLocaleDateString()}
                       </p>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}
+                      >
                         Message
                       </Button>
                     </CardFooter>
@@ -452,6 +520,18 @@ const Referrals = () => {
           </>
         )}
       </Tabs>
+
+      {/* Update Status Modal */}
+      {selectedReferral && (
+        <UpdateReferralStatusModal
+          open={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          onUpdateStatus={handleUpdateStatus}
+          referralId={selectedReferral.id}
+          applicantName={selectedReferral.applicant.name}
+          jobTitle={selectedReferral.position}
+        />
+      )}
     </div>
   );
 };

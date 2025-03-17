@@ -33,6 +33,7 @@ import Terms from "./pages/Terms";
 import Cookies from "./pages/Cookies";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import Notifications from "./pages/Notifications";
 
 // Layouts
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="chat" element={<Chat />} />
               <Route path="chat/:id" element={<Chat />} />
               <Route path="referrals" element={<Referrals />} />
+              <Route path="notifications" element={<Notifications />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

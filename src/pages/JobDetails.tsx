@@ -1,5 +1,6 @@
 
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Building, DollarSign, Briefcase, Calendar, Clock, Users, User, Star, ArrowLeft, ExternalLink, Share2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import RequestReferralModal from "@/components/RequestReferralModal";
 
 // Mock job data - in a real app this would come from an API
 const jobMock = {
@@ -50,14 +54,14 @@ const jobMock = {
   tags: ["React", "TypeScript", "Tailwind CSS", "Frontend", "JavaScript"],
   referrers: [
     {
-      id: 1,
+      id: "2",
       name: "Jessica Thompson",
       title: "Engineering Manager at TechCorp",
       image: "/placeholder.svg",
       connectionDegree: 1
     },
     {
-      id: 2,
+      id: "3",
       name: "Michael Chen",
       title: "Senior Developer at TechCorp",
       image: "/placeholder.svg",
@@ -68,8 +72,50 @@ const jobMock = {
 
 const JobDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
   // In a real app, we would fetch the job details using the id
   const job = jobMock;
+  
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [selectedReferrer, setSelectedReferrer] = useState<typeof job.referrers[0] | null>(null);
+  
+  const handleRequestReferral = (referrer?: typeof job.referrers[0]) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to request a referral.",
+        variant: "destructive",
+      });
+      navigate("/login", { state: { from: `/app/jobs/${id}` } });
+      return;
+    }
+    
+    if (referrer) {
+      setSelectedReferrer(referrer);
+    } else {
+      setSelectedReferrer(null);
+    }
+    
+    setIsReferralModalOpen(true);
+  };
+  
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({
+      title: "Link Copied",
+      description: "Job link copied to clipboard",
+    });
+  };
+  
+  const handleSave = () => {
+    toast({
+      title: "Job Saved",
+      description: "This job has been saved to your profile",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -92,13 +138,13 @@ const JobDetails = () => {
             </div>
           </div>
           <div className="flex gap-2 self-start">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="h-4 w-4 mr-2" /> Share
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleSave}>
               <Star className="h-4 w-4 mr-2" /> Save
             </Button>
-            <Button size="sm">Request Referral</Button>
+            <Button size="sm" onClick={() => handleRequestReferral()}>Request Referral</Button>
           </div>
         </div>
       </div>
@@ -228,7 +274,9 @@ const JobDetails = () => {
                           {referrer.connectionDegree === 1 ? '1st' : `${referrer.connectionDegree}nd`} connection
                         </Badge>
                       </div>
-                      <Button>Request Referral</Button>
+                      <Button onClick={() => handleRequestReferral(referrer)}>
+                        Request Referral
+                      </Button>
                     </div>
                   ))}
                 </CardContent>
@@ -266,7 +314,9 @@ const JobDetails = () => {
                 </ul>
               </div>
               
-              <Button className="w-full">Request Referral</Button>
+              <Button className="w-full" onClick={() => handleRequestReferral()}>
+                Request Referral
+              </Button>
               
               <p className="text-xs text-center text-muted-foreground mt-2">
                 You can request up to 5 referrals per week
@@ -302,11 +352,23 @@ const JobDetails = () => {
                 </div>
               </div>
               
-              <Button variant="ghost" className="w-full">View More Jobs</Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate("/app/jobs")}>
+                View More Jobs
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+      
+      {/* Referral Request Modal */}
+      <RequestReferralModal
+        open={isReferralModalOpen}
+        onClose={() => setIsReferralModalOpen(false)}
+        jobTitle={job.title}
+        company={job.company}
+        referrerId={selectedReferrer?.id}
+        referrerName={selectedReferrer?.name}
+      />
     </div>
   );
 };

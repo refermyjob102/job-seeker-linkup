@@ -3,6 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Briefcase, User, Users, Building, Bell, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 
 // Dummy data for the dashboard
 const recentJobs = [
@@ -18,14 +21,28 @@ const notifications = [
 ];
 
 const Dashboard = () => {
-  // Let's assume we have a user role that would be fetched from an authentication context
-  const userRole = "seeker"; // or "referrer"
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [profileCompletion, setProfileCompletion] = useState(75);
+  const [activeApplications, setActiveApplications] = useState(12);
+  const [availableReferrers, setAvailableReferrers] = useState(83);
+  const [targetCompanies, setTargetCompanies] = useState(8);
+  
+  // Just for demo purposes, we'll use a different set of stats for referrers
+  useEffect(() => {
+    if (user?.role === "referrer") {
+      setProfileCompletion(90);
+      setActiveApplications(8); // Pending referrals for referrers
+      setAvailableReferrers(14); // Team members also referring
+      setTargetCompanies(1); // Their company
+    }
+  }, [user]);
 
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={() => navigate("/app/notifications")}>
           <Bell className="h-4 w-4 mr-2" />
           Notifications
         </Button>
@@ -39,49 +56,85 @@ const Dashboard = () => {
             <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">75%</div>
-            <Progress value={75} className="h-2 mt-2" />
+            <div className="text-2xl font-bold">{profileCompletion}%</div>
+            <Progress value={profileCompletion} className="h-2 mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              Complete your profile to improve matches
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs" 
+                onClick={() => navigate("/app/profile")}
+              >
+                Complete your profile to improve matches
+              </Button>
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Applications</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {user?.role === "seeker" ? "Active Applications" : "Pending Referrals"}
+            </CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{activeApplications}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              3 new applications this week
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs"
+                onClick={() => navigate("/app/referrals")}
+              >
+                {user?.role === "seeker" 
+                  ? "3 new applications this week" 
+                  : "2 new referral requests this week"}
+              </Button>
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available Referrers</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {user?.role === "seeker" ? "Available Referrers" : "Team Members"}
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">83</div>
+            <div className="text-2xl font-bold">{availableReferrers}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              +12 from last week
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs"
+                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : "/app/companies")}
+              >
+                {user?.role === "seeker" 
+                  ? "+12 from last week" 
+                  : "View all team members"}
+              </Button>
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Target Companies</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {user?.role === "seeker" ? "Target Companies" : "Your Company"}
+            </CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{targetCompanies}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              5 have active referrers
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs"
+                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : `/app/companies/${user?.company}`)}
+              >
+                {user?.role === "seeker" 
+                  ? "5 have active referrers" 
+                  : "View company profile"}
+              </Button>
             </p>
           </CardContent>
         </Card>
@@ -92,9 +145,13 @@ const Dashboard = () => {
         <div className="lg:col-span-2">
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>Recent Job Listings</CardTitle>
+              <CardTitle>
+                {user?.role === "seeker" ? "Recent Job Listings" : "Recent Referral Requests"}
+              </CardTitle>
               <CardDescription>
-                Jobs that match your profile and preferences
+                {user?.role === "seeker" 
+                  ? "Jobs that match your profile and preferences" 
+                  : "Pending referral requests from job seekers"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -111,15 +168,22 @@ const Dashboard = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">{job.company} • {job.location}</p>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => navigate(`/app/jobs/${job.id}`)}
+                    >
                       Details
                     </Button>
                   </div>
                 ))}
-                <Button variant="ghost" className="w-full mt-2" asChild>
-                  <a href="/app/jobs">
-                    View all jobs <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-2" 
+                  onClick={() => navigate("/app/jobs")}
+                >
+                  {user?.role === "seeker" ? "View all jobs" : "View all referral requests"} 
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </CardContent>
@@ -142,6 +206,14 @@ const Dashboard = () => {
                     <p className="text-xs text-muted-foreground">{notification.time}</p>
                   </div>
                 ))}
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-2" 
+                  onClick={() => navigate("/app/notifications")}
+                >
+                  View all notifications
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>
