@@ -48,6 +48,11 @@ const UpdateReferralStatusModal = ({
     }, 1000);
   };
 
+  // Create a handler that safely casts the string value to ReferralStatus
+  const handleStatusChange = (value: string) => {
+    setStatus(value as ReferralStatus);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -61,7 +66,7 @@ const UpdateReferralStatusModal = ({
         <div className="space-y-6 py-4">
           <RadioGroup 
             value={status} 
-            onValueChange={setStatus}
+            onValueChange={handleStatusChange}
             className="space-y-3"
           >
             <div className="flex items-start space-x-3 rounded-md border p-3">
