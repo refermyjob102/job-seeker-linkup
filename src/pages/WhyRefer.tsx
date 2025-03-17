@@ -1,9 +1,8 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Building, Award, DollarSign, Users, BarChart } from "lucide-react";
+import { ArrowRight, ChevronRight, Building, DollarSign, Users, Award, Star } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Card, CardContent } from "@/components/ui/card";
 
 const WhyRefer = () => {
   return (
@@ -44,164 +43,170 @@ const WhyRefer = () => {
 
       {/* Main Content */}
       <main className="flex-1 py-12 px-4">
-        <div className="container mx-auto max-w-5xl">
+        <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-16">
-            <h1 className="text-4xl font-bold mb-4">Why Become a Referrer</h1>
+            <h1 className="text-4xl font-bold mb-4">Why Become a Referrer?</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Discover how referring quality candidates through our platform can benefit your career and help others succeed.
+              Help others advance their careers while earning rewards and building your professional network.
             </p>
           </div>
 
-          {/* Benefits Section */}
+          {/* Benefits */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-            <Card className="p-2">
-              <CardContent className="p-6">
-                <Award className="h-12 w-12 text-primary mb-4" />
-                <h2 className="text-xl font-bold mb-3">Build Your Professional Brand</h2>
-                <p className="text-muted-foreground">
-                  Establish yourself as a valuable connector in your industry. Increase your visibility and reputation within your company and professional network.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="p-2">
-              <CardContent className="p-6">
-                <DollarSign className="h-12 w-12 text-primary mb-4" />
-                <h2 className="text-xl font-bold mb-3">Earn Referral Bonuses</h2>
-                <p className="text-muted-foreground">
-                  Many companies offer substantial referral bonuses for successful hires. Some of our referrers have earned thousands of dollars through company referral programs.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="p-2">
-              <CardContent className="p-6">
-                <Users className="h-12 w-12 text-primary mb-4" />
-                <h2 className="text-xl font-bold mb-3">Expand Your Network</h2>
-                <p className="text-muted-foreground">
-                  Connect with talented professionals across various industries and roles. Build meaningful relationships that can benefit your career in the long term.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="p-2">
-              <CardContent className="p-6">
-                <BarChart className="h-12 w-12 text-primary mb-4" />
-                <h2 className="text-xl font-bold mb-3">Help Shape Your Company</h2>
-                <p className="text-muted-foreground">
-                  Influence your company's culture and success by helping bring in talented people who align with your organization's values and goals.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-card rounded-lg p-8 border hover:shadow-md transition-all">
+              <DollarSign className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Earn Rewards</h3>
+              <p className="text-muted-foreground mb-4">
+                Receive cash bonuses, gift cards, and exclusive perks for successful referrals to your company.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Up to $2,000 per successful hire</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Premium membership benefits</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Special partner discounts</span>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-card rounded-lg p-8 border hover:shadow-md transition-all">
+              <Users className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Build Your Network</h3>
+              <p className="text-muted-foreground mb-4">
+                Expand your professional connections and establish yourself as a valuable resource in your industry.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Connect with top talent</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Enhance your professional reputation</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Strengthen industry relationships</span>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-card rounded-lg p-8 border hover:shadow-md transition-all">
+              <Award className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Gain Recognition</h3>
+              <p className="text-muted-foreground mb-4">
+                Be recognized as a top referrer within your company and on our platform with special badges and features.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Featured referrer status</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Performance badges</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Leaderboard recognition</span>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-card rounded-lg p-8 border hover:shadow-md transition-all">
+              <Building className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-3">Help Your Company</h3>
+              <p className="text-muted-foreground mb-4">
+                Contribute to your company's growth by helping attract high-quality talent that fits the culture.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Reduce hiring costs</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Improve culture fit</span>
+                </li>
+                <li className="flex items-start">
+                  <Star className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                  <span>Lower turnover rates</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          {/* How It Works */}
-          <div className="bg-card border rounded-lg p-8 mb-16">
+          {/* How It Works for Referrers */}
+          <div className="mb-16">
             <h2 className="text-2xl font-bold mb-6 text-center">How It Works for Referrers</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">1</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-card rounded-lg p-6 border text-center">
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">1</div>
                 <h3 className="font-semibold mb-2">Create Your Profile</h3>
-                <p className="text-muted-foreground text-sm">
-                  Sign up and verify your current employment. Specify which roles and departments you can refer candidates to.
-                </p>
+                <p className="text-sm text-muted-foreground">Sign up and indicate your current company and role. Verify your work email to become an official referrer.</p>
               </div>
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">2</div>
-                <h3 className="font-semibold mb-2">Connect with Candidates</h3>
-                <p className="text-muted-foreground text-sm">
-                  Review profiles of job seekers interested in your company. Message them to learn more about their experience and goals.
-                </p>
+              <div className="bg-card rounded-lg p-6 border text-center">
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">2</div>
+                <h3 className="font-semibold mb-2">Browse Candidates</h3>
+                <p className="text-sm text-muted-foreground">Review profiles of job seekers interested in your company. Filter by skills, experience, and role fit.</p>
               </div>
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">3</div>
-                <h3 className="font-semibold mb-2">Submit Referrals</h3>
-                <p className="text-muted-foreground text-sm">
-                  Refer qualified candidates through your company's referral system. Track the status of your referrals on our platform.
-                </p>
+              <div className="bg-card rounded-lg p-6 border text-center">
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold mx-auto mb-4">3</div>
+                <h3 className="font-semibold mb-2">Make Referrals</h3>
+                <p className="text-sm text-muted-foreground">Submit referrals for promising candidates through our platform. Track their progress and earn rewards.</p>
               </div>
             </div>
           </div>
 
           {/* Testimonials */}
-          <h2 className="text-2xl font-bold mb-6 text-center">What Referrers Say</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-            <div className="bg-card border rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden mr-4">
-                  <img src="https://i.pravatar.cc/150?img=45" alt="Michael Brown" className="w-full h-full object-cover" />
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-6 text-center">What Referrers Say</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
+                    <span className="font-bold text-primary">MJ</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Michael Johnson</h3>
+                    <p className="text-sm text-muted-foreground">Senior Engineer at Microsoft</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold">Michael Brown</h3>
-                  <p className="text-sm text-muted-foreground">Engineering Manager at Facebook</p>
-                </div>
-              </div>
-              <p className="text-muted-foreground italic">
-                "I've referred 12 engineers through JobReferral, and 8 of them are now my colleagues. The platform makes it easy to find candidates who are actually qualified, and my company has paid me over $20,000 in referral bonuses."
-              </p>
-            </div>
-            <div className="bg-card border rounded-lg p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden mr-4">
-                  <img src="https://i.pravatar.cc/150?img=22" alt="Aisha Johnson" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Aisha Johnson</h3>
-                  <p className="text-sm text-muted-foreground">Product Marketing at Microsoft</p>
-                </div>
-              </div>
-              <p className="text-muted-foreground italic">
-                "Being a referrer on this platform has actually helped me advance my own career. It demonstrated my commitment to company growth and connected me with talented professionals across the industry."
-              </p>
-            </div>
-          </div>
-
-          {/* Frequently Asked Questions */}
-          <div className="bg-card border rounded-lg p-8 mb-16">
-            <h2 className="text-2xl font-bold mb-6 text-center">Frequently Asked Questions</h2>
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold mb-2">Does it cost anything to be a referrer?</h3>
-                <p className="text-muted-foreground">
-                  No, being a referrer on JobReferral is completely free. We never charge referrers for connecting with candidates or submitting referrals.
+                <p className="italic text-muted-foreground">
+                  "I've referred 7 people through JobReferral in the past year. Not only did I earn substantial bonuses, but I also helped build a stronger team with great talent that might have been overlooked otherwise."
                 </p>
               </div>
-              <div>
-                <h3 className="font-semibold mb-2">Am I obligated to refer everyone who contacts me?</h3>
-                <p className="text-muted-foreground">
-                  Not at all. You have full discretion over who you choose to refer. We encourage referrers to only recommend candidates they genuinely believe would be a good fit.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">Will my company know I'm active on JobReferral?</h3>
-                <p className="text-muted-foreground">
-                  Your profile is only visible to job seekers on our platform. We do not contact your employer or share your information with them.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-2">How many people can I refer?</h3>
-                <p className="text-muted-foreground">
-                  There's no limit to how many candidates you can refer through our platform. However, we encourage quality over quantity to maintain high standards.
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
+                    <span className="font-bold text-primary">AK</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Aisha Khan</h3>
+                    <p className="text-sm text-muted-foreground">Product Manager at Google</p>
+                  </div>
+                </div>
+                <p className="italic text-muted-foreground">
+                  "Being a referrer on this platform has helped me build my personal brand within my company. My managers notice my commitment to growing the team, and I've helped several talented individuals kickstart their careers."
                 </p>
               </div>
             </div>
           </div>
 
           {/* CTA */}
-          <div className="bg-primary/10 rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Ready to Make an Impact?</h2>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Join our community of professionals helping talented candidates find their way to great companies.
+          <div className="text-center bg-primary/10 rounded-lg p-8">
+            <h2 className="text-2xl font-bold mb-4">Ready to Become a Referrer?</h2>
+            <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+              Join our community of professionals helping others advance their careers while earning rewards.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register?role=referrer">
-                <Button size="lg">
-                  Become a Referrer
-                </Button>
-              </Link>
-              <Link to="/rewards">
-                <Button size="lg" variant="outline">
-                  Learn About Rewards
-                </Button>
-              </Link>
-            </div>
+            <Link to="/register?role=referrer">
+              <Button size="lg">
+                Sign Up as a Referrer <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </main>

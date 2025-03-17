@@ -1,12 +1,86 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Building, Gift, Star, Trophy, DollarSign } from "lucide-react";
+import { ChevronRight, Building, Gift, DollarSign, Zap, Award, Calendar, ArrowRight } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
 
 const Rewards = () => {
+  const rewardTiers = [
+    {
+      name: "Bronze",
+      referrals: "1-2",
+      rewards: [
+        "$250 per successful hire",
+        "Recognition on platform",
+        "Exclusive job referral tips"
+      ]
+    },
+    {
+      name: "Silver",
+      referrals: "3-5",
+      rewards: [
+        "$500 per successful hire",
+        "Early access to new features",
+        "Premium job market insights",
+        "Featured referrer status"
+      ]
+    },
+    {
+      name: "Gold",
+      referrals: "6-10",
+      rewards: [
+        "$1,000 per successful hire",
+        "VIP customer support",
+        "Invitation to exclusive networking events",
+        "Personal career coaching session"
+      ]
+    },
+    {
+      name: "Platinum",
+      referrals: "11+",
+      rewards: [
+        "$2,000 per successful hire",
+        "One-on-one mentorship opportunities",
+        "Premium partner discounts",
+        "Leadership advisory board invitation",
+        "Annual referrer awards eligibility"
+      ]
+    }
+  ];
+
+  const partnerRewards = [
+    {
+      name: "Amazon Gift Cards",
+      description: "Redeem your points for Amazon gift cards to use for online shopping.",
+      icon: <Gift className="h-10 w-10 text-primary" />
+    },
+    {
+      name: "Cash Bonuses",
+      description: "Transfer your rewards directly to your bank account as cash bonuses.",
+      icon: <DollarSign className="h-10 w-10 text-primary" />
+    },
+    {
+      name: "Premium Subscriptions",
+      description: "Get complimentary subscriptions to premium services like Spotify, Netflix, or LinkedIn Premium.",
+      icon: <Zap className="h-10 w-10 text-primary" />
+    },
+    {
+      name: "Professional Development",
+      description: "Use your rewards for courses, certifications, or conferences to advance your career.",
+      icon: <Award className="h-10 w-10 text-primary" />
+    },
+    {
+      name: "Charity Donations",
+      description: "Donate your rewards to a charity of your choice and make a positive impact.",
+      icon: <Gift className="h-10 w-10 text-primary" />
+    },
+    {
+      name: "Exclusive Events",
+      description: "Gain access to invitation-only industry events and networking opportunities.",
+      icon: <Calendar className="h-10 w-10 text-primary" />
+    }
+  ];
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
@@ -45,212 +119,133 @@ const Rewards = () => {
 
       {/* Main Content */}
       <main className="flex-1 py-12 px-4">
-        <div className="container mx-auto max-w-5xl">
+        <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h1 className="text-4xl font-bold mb-4">Referrer Rewards Program</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Get recognized and rewarded for helping talented professionals advance their careers through your referrals.
+              Get rewarded for helping others advance their careers through your valuable referrals.
             </p>
-          </div>
-
-          {/* Hero Banner */}
-          <div className="bg-gradient-to-r from-primary to-primary-foreground/30 text-white rounded-lg p-8 mb-16">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="md:w-2/3">
-                <h2 className="text-2xl font-bold mb-4">Earn While You Help Others</h2>
-                <p className="mb-4">
-                  Our referral rewards program is designed to recognize your contribution to both our community and your company's growth. Earn points, badges, and even cash rewards for successful referrals.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link to="/register?role=referrer">
-                    <Button variant="default" className="bg-white text-primary hover:bg-white/90">
-                      Join as a Referrer
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-              <div className="md:w-1/3 flex justify-center">
-                <Gift className="h-28 w-28 text-white/90" />
-              </div>
-            </div>
           </div>
 
           {/* How It Works */}
-          <h2 className="text-2xl font-bold mb-6 text-center">How Our Rewards Program Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <Card className="p-2">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Star className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-bold text-lg mb-3">Earn Points</h3>
-                <p className="text-muted-foreground text-sm">
-                  Accumulate points for every referral, with bonus points for candidates who receive interviews and offers.
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-8 text-center">How The Rewards Program Works</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="bg-card rounded-lg p-8 border relative">
+                <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">1</div>
+                <h3 className="text-xl font-semibold mb-4">Refer Candidates</h3>
+                <p className="text-muted-foreground">
+                  Browse job seekers interested in your company, review their profiles, and refer those who are a good fit.
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="p-2">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Trophy className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-bold text-lg mb-3">Unlock Badges</h3>
-                <p className="text-muted-foreground text-sm">
-                  Earn exclusive badges that showcase your expertise and commitment on your profile.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="p-2">
-              <CardContent className="p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <DollarSign className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-bold text-lg mb-3">Redeem Rewards</h3>
-                <p className="text-muted-foreground text-sm">
-                  Convert your points to gift cards, premium memberships, or donate to charity.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Points System */}
-          <div className="bg-card border rounded-lg p-8 mb-16">
-            <h2 className="text-xl font-bold mb-6">Points System</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>Submitting a referral</TableCell>
-                  <TableCell className="text-right">50 points</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Candidate receives an interview</TableCell>
-                  <TableCell className="text-right">100 points</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Candidate receives an offer</TableCell>
-                  <TableCell className="text-right">250 points</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Candidate accepts offer</TableCell>
-                  <TableCell className="text-right">500 points</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Positive candidate feedback</TableCell>
-                  <TableCell className="text-right">50 points</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Badge Levels */}
-          <h2 className="text-2xl font-bold mb-6 text-center">Badge Levels</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
-            {['Bronze', 'Silver', 'Gold', 'Platinum'].map((level, index) => (
-              <div key={level} className="bg-card border rounded-lg p-6 text-center">
-                <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-                  level === 'Bronze' ? 'bg-amber-700/20' :
-                  level === 'Silver' ? 'bg-gray-300/20' :
-                  level === 'Gold' ? 'bg-yellow-500/20' :
-                  'bg-slate-400/20'
-                }`}>
-                  <Trophy className={`h-8 w-8 ${
-                    level === 'Bronze' ? 'text-amber-700' :
-                    level === 'Silver' ? 'text-gray-400' :
-                    level === 'Gold' ? 'text-yellow-500' :
-                    'text-slate-400'
-                  }`} />
-                </div>
-                <h3 className="font-bold mb-2">{level} Referrer</h3>
-                <p className="text-muted-foreground text-sm">{(index + 1) * 5} successful referrals</p>
               </div>
-            ))}
-          </div>
-
-          {/* Reward Options */}
-          <div className="bg-card border rounded-lg p-8 mb-16">
-            <h2 className="text-xl font-bold mb-6 text-center">Reward Options</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-2">Gift Cards</h3>
-                <p className="text-muted-foreground text-sm mb-3">
-                  Exchange your points for gift cards from popular retailers and restaurants.
+              <div className="bg-card rounded-lg p-8 border relative">
+                <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">2</div>
+                <h3 className="text-xl font-semibold mb-4">Track Progress</h3>
+                <p className="text-muted-foreground">
+                  Follow your referrals through the hiring process, from initial contact to interview to offer.
                 </p>
-                <div className="text-sm font-medium">1,000 points = $25 gift card</div>
               </div>
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-2">Premium Membership</h3>
-                <p className="text-muted-foreground text-sm mb-3">
-                  Upgrade to a premium JobReferral membership with enhanced features.
+              <div className="bg-card rounded-lg p-8 border relative">
+                <div className="absolute -top-4 -left-4 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">3</div>
+                <h3 className="text-xl font-semibold mb-4">Earn Rewards</h3>
+                <p className="text-muted-foreground">
+                  Receive rewards when your referrals are successfully hired. The more successful referrals, the higher your tier and rewards.
                 </p>
-                <div className="text-sm font-medium">2,000 points = 3 months premium</div>
-              </div>
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold mb-2">Charity Donation</h3>
-                <p className="text-muted-foreground text-sm mb-3">
-                  Convert your points to donations for charitable organizations.
-                </p>
-                <div className="text-sm font-medium">1,000 points = $30 donation</div>
               </div>
             </div>
           </div>
 
-          {/* Top Referrers */}
-          <h2 className="text-2xl font-bold mb-6 text-center">Top Referrers This Month</h2>
-          <div className="bg-card border rounded-lg p-6 mb-16">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rank</TableHead>
-                  <TableHead>Referrer</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Successful Referrals</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[
-                  {name: "Alex Johnson", company: "Google", referrals: 7, points: 4350},
-                  {name: "Sarah Chen", company: "Microsoft", referrals: 6, points: 3800},
-                  {name: "David Kim", company: "Meta", referrals: 5, points: 3200},
-                  {name: "Lisa Parker", company: "Amazon", referrals: 4, points: 2750},
-                  {name: "James Wilson", company: "Apple", referrals: 4, points: 2500},
-                ].map((person, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell>{person.name}</TableCell>
-                    <TableCell>{person.company}</TableCell>
-                    <TableCell>{person.referrals}</TableCell>
-                    <TableCell className="text-right">{person.points}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          {/* Reward Tiers */}
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-8 text-center">Reward Tiers</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {rewardTiers.map((tier, index) => (
+                <div key={index} className={`bg-card rounded-lg border p-6 ${index === 3 ? 'border-primary/50 shadow-md' : ''}`}>
+                  <h3 className="text-xl font-bold mb-2">{tier.name} Tier</h3>
+                  <div className="text-sm text-muted-foreground mb-4">{tier.referrals} successful referrals</div>
+                  <ul className="space-y-2">
+                    {tier.rewards.map((reward, i) => (
+                      <li key={i} className="flex items-start">
+                        <div className="rounded-full bg-primary/10 p-1 mr-2 mt-0.5">
+                          <ChevronRight className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="text-sm">{reward}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Partner Rewards */}
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-8 text-center">How to Redeem Your Rewards</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {partnerRewards.map((reward, index) => (
+                <div key={index} className="bg-card rounded-lg p-6 border hover:shadow-md transition-all">
+                  <div className="mb-4">
+                    {reward.icon}
+                  </div>
+                  <h3 className="font-semibold mb-2">{reward.name}</h3>
+                  <p className="text-sm text-muted-foreground">{reward.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Success Stories */}
+          <div className="mb-16">
+            <h2 className="text-2xl font-bold mb-8 text-center">Referrer Success Stories</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
+                    <span className="font-bold text-primary">JS</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">James Smith</h3>
+                    <p className="text-sm text-muted-foreground">Software Engineer at Apple</p>
+                  </div>
+                </div>
+                <p className="italic text-muted-foreground mb-3">
+                  "I earned over $5,000 in referral bonuses last year by helping my former colleagues and industry connections find opportunities at Apple. The platform made it incredibly easy to track referrals and receive rewards."
+                </p>
+                <div className="text-sm">
+                  <span className="font-medium">Rewards earned:</span> Gold Tier ($1,000 per hire)
+                </div>
+              </div>
+              <div className="bg-card rounded-lg p-6 border">
+                <div className="flex items-center mb-4">
+                  <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
+                    <span className="font-bold text-primary">LW</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Lisa Wong</h3>
+                    <p className="text-sm text-muted-foreground">HR Manager at Amazon</p>
+                  </div>
+                </div>
+                <p className="italic text-muted-foreground mb-3">
+                  "As an HR professional, I love being able to connect talented candidates with opportunities at my company. The rewards are a nice bonus, but I mostly enjoy helping others advance their careers and contributing to my company's growth."
+                </p>
+                <div className="text-sm">
+                  <span className="font-medium">Rewards earned:</span> Platinum Tier ($2,000 per hire)
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* CTA */}
-          <div className="bg-primary/10 rounded-lg p-8 text-center">
+          <div className="text-center bg-primary/10 rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-4">Start Earning Rewards Today</h2>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Join our referrer community and help talented professionals while earning rewards for your valuable contributions.
+            <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+              Join our community of referrers and turn your professional network into rewards while helping others advance their careers.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register?role=referrer">
-                <Button size="lg">
-                  Become a Referrer
-                </Button>
-              </Link>
-              <Link to="/why-refer">
-                <Button size="lg" variant="outline">
-                  Learn More Benefits
-                </Button>
-              </Link>
-            </div>
+            <Link to="/register?role=referrer">
+              <Button size="lg">
+                Become a Referrer <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </main>
