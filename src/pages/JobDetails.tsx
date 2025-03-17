@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import RequestReferralModal from "@/components/RequestReferralModal";
+import DetailedReferralRequestModal from "@/components/DetailedReferralRequestModal";
 
 // Mock job data - in a real app this would come from an API
 const jobMock = {
@@ -117,6 +116,7 @@ const JobDetails = () => {
     });
   };
 
+  
   return (
     <div className="space-y-6">
       <div>
@@ -149,6 +149,7 @@ const JobDetails = () => {
         </div>
       </div>
 
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -360,8 +361,8 @@ const JobDetails = () => {
         </div>
       </div>
       
-      {/* Referral Request Modal */}
-      <RequestReferralModal
+      {/* Detailed Referral Request Modal */}
+      <DetailedReferralRequestModal
         open={isReferralModalOpen}
         onClose={() => setIsReferralModalOpen(false)}
         jobTitle={job.title}
