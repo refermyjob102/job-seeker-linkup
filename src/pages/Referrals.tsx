@@ -6,7 +6,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import UpdateReferralStatusModal from "@/components/UpdateReferralStatusModal";
-import { initialReferrals, initialOutgoingReferrals, ReferrerReferral, SeekerReferral } from "@/features/referrals/data/mockReferrals";
+import { 
+  initialReferrals, 
+  initialOutgoingReferrals, 
+  ReferrerReferral, 
+  SeekerReferral, 
+  ReferralStatus 
+} from "@/features/referrals/data/mockReferrals";
 import SeekerTabs from "@/features/referrals/components/SeekerTabs";
 import ReferrerTabs from "@/features/referrals/components/ReferrerTabs";
 
@@ -31,7 +37,7 @@ const Referrals = () => {
     // Update the referral status in our state
     const updatedReferrals = outgoingReferrals.map(ref => 
       ref.id === selectedReferral.id 
-        ? { ...ref, status: status as any } 
+        ? { ...ref, status: status as ReferralStatus } 
         : ref
     );
     

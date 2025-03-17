@@ -1,6 +1,6 @@
 
 // Mock referral data for job seekers
-export const initialReferrals = [
+export const initialReferrals: SeekerReferral[] = [
   {
     id: "1",
     company: "Google",
@@ -43,7 +43,7 @@ export const initialReferrals = [
 ];
 
 // Mock outgoing referrals (for referrers)
-export const initialOutgoingReferrals = [
+export const initialOutgoingReferrals: ReferrerReferral[] = [
   {
     id: "4",
     company: "Google",

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { ReferralStatus } from "@/features/referrals/data/mockReferrals";
 
 interface UpdateReferralStatusModalProps {
   open: boolean;
@@ -24,7 +25,7 @@ const UpdateReferralStatusModal = ({
   applicantName,
   jobTitle,
 }: UpdateReferralStatusModalProps) => {
-  const [status, setStatus] = useState<string>("accepted");
+  const [status, setStatus] = useState<ReferralStatus>("accepted");
   const [feedback, setFeedback] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
