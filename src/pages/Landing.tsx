@@ -1,10 +1,51 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Briefcase, UserCheck, Users, ChevronRight } from "lucide-react";
+import { ArrowRight, Briefcase, UserCheck, Users, ChevronRight, Building, ExternalLink } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const Landing = () => {
+  // Mock featured companies data
+  const featuredCompanies = [
+    {
+      id: 1,
+      name: "Google",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png",
+      description: "A multinational technology company specializing in internet-related services and products, including online advertising technologies, a search engine, cloud computing, software, and hardware.",
+      employeesCount: 1842,
+      locations: ["Mountain View", "New York", "London", "Tokyo"],
+      departments: ["Engineering", "Product", "Marketing", "Sales"]
+    },
+    {
+      id: 2,
+      name: "Microsoft",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/512px-Microsoft_logo.svg.png",
+      description: "A technology corporation that develops, manufactures, licenses, supports, and sells computer software, consumer electronics, personal computers, and related services.",
+      employeesCount: 1347,
+      locations: ["Redmond", "Seattle", "Dublin", "Singapore"],
+      departments: ["Software Development", "Cloud Computing", "AI Research", "Hardware"]
+    },
+    {
+      id: 3,
+      name: "Amazon",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png",
+      description: "An American multinational technology company focused on e-commerce, cloud computing, digital streaming, and artificial intelligence.",
+      employeesCount: 1586,
+      locations: ["Seattle", "Arlington", "San Francisco", "Austin"],
+      departments: ["Operations", "AWS", "Software Engineering", "Logistics"]
+    },
+    {
+      id: 4,
+      name: "Apple",
+      logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/488px-Apple_logo_black.svg.png",
+      description: "An American multinational technology company that designs, develops, and sells consumer electronics, computer software, and online services.",
+      employeesCount: 1123,
+      locations: ["Cupertino", "Austin", "New York", "London"],
+      departments: ["Hardware Engineering", "Software Engineering", "Design", "Machine Learning"]
+    }
+  ];
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
@@ -63,6 +104,72 @@ const Landing = () => {
                 className="relative rounded-lg shadow-2xl w-full object-cover"
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Companies Section - New Section */}
+      <section className="py-20 px-4 bg-background">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <span className="text-primary font-medium">Join Our Network</span>
+            <h2 className="text-3xl font-bold mt-2">Featured Companies</h2>
+            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+              Connect with employees at these top companies who can refer you directly to hiring managers
+            </p>
+            <div className="w-20 h-1 bg-primary mx-auto mt-6 rounded-full"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredCompanies.map((company) => (
+              <Card key={company.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="w-12 h-12 flex items-center justify-center mr-4 overflow-hidden">
+                      <img 
+                        src={company.logo} 
+                        alt={`${company.name} logo`} 
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {company.employeesCount} employees
+                    </Badge>
+                  </div>
+                  <CardTitle className="mt-4">{company.name}</CardTitle>
+                  <CardDescription className="line-clamp-3 h-[4.5rem]">
+                    {company.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {company.departments.map((dept) => (
+                      <Badge key={dept} variant="secondary" className="text-xs">
+                        {dept}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <strong className="text-foreground">Locations:</strong> {company.locations.join(", ")}
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link to="/login" state={{ from: `/app/companies/${company.id}` }} className="w-full">
+                    <Button variant="outline" className="w-full flex items-center justify-center">
+                      View Details <ExternalLink className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="text-center mt-10">
+            <Link to="/browse-jobs">
+              <Button variant="default" size="lg" className="bg-primary">
+                Browse All Companies <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
