@@ -173,6 +173,7 @@ const Profile = () => {
       <h1 className="text-3xl font-bold">My Profile</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Basic Info */}
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-col items-center">
             <div className="relative">
@@ -266,12 +267,13 @@ const Profile = () => {
           </CardContent>
         </Card>
         
+        {/* Right Column - Additional Info */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="details">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="skills">Skills</TabsTrigger>
-              {user.role === 'referrer' && (
+              {user?.role === 'referrer' && (
                 <TabsTrigger value="company">Company</TabsTrigger>
               )}
             </TabsList>
@@ -338,14 +340,14 @@ const Profile = () => {
                   <CardDescription>Add or remove skills from your profile</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <SkillsSection userId={user.id} initialSkills={userSkills} />
+                  <SkillsSection userId={user?.id} initialSkills={userSkills} />
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {user.role === 'referrer' && (
+            {user?.role === 'referrer' && (
               <TabsContent value="company" className="space-y-4 mt-4">
-                <CompanySection userId={user.id} currentCompany={userCompany || undefined} />
+                <CompanySection userId={user?.id} currentCompany={userCompany || undefined} />
               </TabsContent>
             )}
           </Tabs>
