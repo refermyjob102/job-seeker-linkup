@@ -1,167 +1,153 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/types/database';
+import { useToast } from '@/components/ui/use-toast';
 
-// Define user types
 export type UserRole = 'seeker' | 'referrer';
 
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  company?: string;
-  jobTitle?: string;
-  location?: string;
-  avatar?: string;
-}
-
 interface AuthContextType {
-  user: User | null;
+  user: Profile | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: Partial<User>, password: string) => Promise<void>;
+  register: (userData: Partial<Profile>, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data - would be replaced with actual API calls
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'john@example.com',
-    firstName: 'John',
-    lastName: 'Doe',
-    role: 'seeker',
-    location: 'San Francisco, CA',
-    avatar: 'https://github.com/shadcn.png',
-  },
-  {
-    id: '2',
-    email: 'jane@google.com',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    role: 'referrer',
-    company: 'Google',
-    jobTitle: 'Senior Developer',
-    location: 'Mountain View, CA',
-    avatar: 'https://i.pravatar.cc/150?img=2',
-  },
-  {
-    id: '3',
-    email: 'alex@meta.com',
-    firstName: 'Alex',
-    lastName: 'Johnson',
-    role: 'referrer',
-    company: 'Meta',
-    jobTitle: 'Product Manager',
-    location: 'Menlo Park, CA',
-    avatar: 'https://i.pravatar.cc/150?img=3',
-  },
-  {
-    id: '4',
-    email: 'sarah@apple.com',
-    firstName: 'Sarah',
-    lastName: 'Williams',
-    role: 'referrer',
-    company: 'Apple',
-    jobTitle: 'UX Designer',
-    location: 'Cupertino, CA',
-    avatar: 'https://i.pravatar.cc/150?img=4',
-  },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Check for saved user on initial load
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUser(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setUser(null);
+    }
+  };
+
+  const register = async (userData: Partial<Profile>, password: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email!,
+        password,
+        options: {
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role,
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        // The trigger will create the profile automatically
+        await fetchProfile(authData.user.id);
+        
+        toast({
+          title: "Registration successful!",
+          description: "Your account has been created.",
+        });
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred during registration');
+      toast({
+        title: "Registration failed",
+        description: err instanceof Error ? err.message : 'An error occurred during registration',
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Find user with matching email
-      const matchedUser = mockUsers.find(u => u.email === email);
-      if (!matchedUser) {
-        throw new Error('Invalid email or password');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        await fetchProfile(data.user.id);
       }
-      
-      // In a real app, would verify password here
-      if (password.length < 6) {
-        throw new Error('Invalid email or password');
-      }
-      
-      setUser(matchedUser);
-      localStorage.setItem('user', JSON.stringify(matchedUser));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred during login');
+      toast({
+        title: "Login failed",
+        description: err instanceof Error ? err.message : 'An error occurred during login',
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (userData: Partial<User>, password: string) => {
-    setIsLoading(true);
-    setError(null);
-    
+  const logout = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if email is already in use
-      if (mockUsers.some(u => u.email === userData.email)) {
-        throw new Error('Email already in use');
-      }
-      
-      // Create new user
-      const newUser: User = {
-        id: String(mockUsers.length + 1),
-        email: userData.email!,
-        firstName: userData.firstName!,
-        lastName: userData.lastName!,
-        role: userData.role!,
-        company: userData.company,
-        jobTitle: userData.jobTitle,
-        location: userData.location || 'No location provided',
-        avatar: `https://i.pravatar.cc/150?img=${mockUsers.length + 5}`,
-      };
-      
-      // In a real app, would save user to database here
-      mockUsers.push(newUser);
-      
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      await supabase.auth.signOut();
+      setUser(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
+      console.error('Logout error:', err);
+      toast({
+        title: "Logout failed",
+        description: err instanceof Error ? err.message : 'An error occurred during logout',
+        variant: "destructive",
+      });
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-  };
-
-  const clearError = () => {
-    setError(null);
-  };
+  const clearError = () => setError(null);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, error, login, register, logout, clearError }}>
