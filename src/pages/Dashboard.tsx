@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Briefcase, User, Users, Building, Bell, ArrowRight } from "lucide-react";
@@ -6,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Dummy data for the dashboard
 const recentJobs = [
@@ -27,6 +27,25 @@ const Dashboard = () => {
   const [activeApplications, setActiveApplications] = useState(12);
   const [availableReferrers, setAvailableReferrers] = useState(83);
   const [targetCompanies, setTargetCompanies] = useState(8);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserCompany = async () => {
+      if (user?.role === 'referrer') {
+        const { data } = await supabase
+          .from('company_members')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (data) {
+          setUserCompanyId(data.company_id);
+        }
+      }
+    };
+
+    fetchUserCompany();
+  }, [user]);
   
   // Just for demo purposes, we'll use a different set of stats for referrers
   useEffect(() => {
@@ -37,6 +56,14 @@ const Dashboard = () => {
       setTargetCompanies(1); // Their company
     }
   }, [user]);
+
+  // Update the company link to use the userCompanyId
+  const getCompanyLink = () => {
+    if (user?.role === 'referrer' && userCompanyId) {
+      return `/app/companies/${userCompanyId}`;
+    }
+    return '/app/companies';
+  };
 
   return (
     <div className="space-y-8">
@@ -129,7 +156,7 @@ const Dashboard = () => {
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs"
-                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : `/app/companies/${user?.company}`)}
+                onClick={() => navigate(getCompanyLink())}
               >
                 {user?.role === "seeker" 
                   ? "5 have active referrers" 

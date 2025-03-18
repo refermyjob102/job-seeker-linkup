@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
@@ -56,7 +57,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) throw error;
-      setUser(data);
+      
+      // Ensure the role is properly typed
+      if (data && (data.role === 'seeker' || data.role === 'referrer')) {
+        setUser(data as Profile);
+      } else {
+        throw new Error('Invalid user role');
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setUser(null);
