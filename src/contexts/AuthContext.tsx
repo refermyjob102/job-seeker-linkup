@@ -57,13 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) throw error;
-      
-      // Ensure the role is properly typed
-      if (data && (data.role === 'seeker' || data.role === 'referrer')) {
-        setUser(data as Profile);
-      } else {
-        throw new Error('Invalid user role');
-      }
+      setUser(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
       setUser(null);
@@ -82,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             first_name: userData.first_name,
             last_name: userData.last_name,
-            role: userData.role as UserRole,
+            role: userData.role,
           }
         }
       });

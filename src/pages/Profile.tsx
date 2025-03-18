@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,6 @@ import { uploadFile } from "@/lib/fileUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { SkillsSection } from "@/components/profile/SkillsSection";
-import { CompanySection } from "@/components/profile/CompanySection";
 
 interface ProfileFormData {
   first_name: string;
@@ -25,25 +24,11 @@ interface ProfileFormData {
   bio: string;
 }
 
-interface Skill {
-  id: string;
-  name: string;
-  category: string;
-}
-
-interface Company {
-  id: string;
-  name: string;
-  logo_url?: string;
-}
-
 const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [userSkills, setUserSkills] = useState<Skill[]>([]);
-  const [userCompany, setUserCompany] = useState<Company | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormData>({
     defaultValues: {
@@ -54,84 +39,6 @@ const Profile = () => {
       bio: user?.bio || "",
     }
   });
-
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchUserData = async () => {
-      try {
-        const { data: skillsData } = await supabase
-          .from('user_skills')
-          .select(`
-            skills (
-              id,
-              name,
-              category
-            )
-          `)
-          .eq('user_id', user.id);
-
-        if (skillsData) {
-          setUserSkills(skillsData.map(item => item.skills));
-        }
-
-        if (user.role === 'referrer') {
-          const { data: companyData } = await supabase
-            .from('company_members')
-            .select(`
-              companies (
-                id,
-                name,
-                logo_url
-              )
-            `)
-            .eq('user_id', user.id)
-            .single();
-
-          if (companyData) {
-            setUserCompany(companyData.companies);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUserData();
-  }, [user]);
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'resume') => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
-
-    setIsUploading(true);
-    try {
-      const fileUrl = await uploadFile(file, type, user[type === 'avatar' ? 'avatar_url' : 'resume_url']);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          [type === 'avatar' ? 'avatar_url' : 'resume_url']: fileUrl,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: `${type === 'avatar' ? 'Profile picture' : 'Resume'} updated`,
-        description: `Your ${type === 'avatar' ? 'profile picture' : 'resume'} has been updated successfully.`,
-      });
-    } catch (error) {
-      console.error(`Error uploading ${type}:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to upload ${type === 'avatar' ? 'profile picture' : 'resume'}. Please try again.`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!user) return;
@@ -166,6 +73,39 @@ const Profile = () => {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'resume') => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploading(true);
+    try {
+      const fileUrl = await uploadFile(file, type, user[type === 'avatar' ? 'avatar_url' : 'resume_url']);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          [type === 'avatar' ? 'avatar_url' : 'resume_url']: fileUrl,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: `${type === 'avatar' ? 'Profile picture' : 'Resume'} updated`,
+        description: `Your ${type === 'avatar' ? 'profile picture' : 'resume'} has been updated successfully.`,
+      });
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to upload ${type === 'avatar' ? 'profile picture' : 'resume'}. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -173,7 +113,7 @@ const Profile = () => {
       <h1 className="text-3xl font-bold">My Profile</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Basic Info */}
+        {/* Profile Summary Card */}
         <Card className="lg:col-span-1">
           <CardHeader className="flex flex-col items-center">
             <div className="relative">
@@ -267,68 +207,73 @@ const Profile = () => {
           </CardContent>
         </Card>
         
-        {/* Right Column - Additional Info */}
+        {/* Profile Details */}
         <div className="lg:col-span-2">
-          <Tabs defaultValue="details">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="details">Details</TabsTrigger>
+          <Tabs defaultValue="resume">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="resume">Resume</TabsTrigger>
               <TabsTrigger value="skills">Skills</TabsTrigger>
-              {user?.role === 'referrer' && (
-                <TabsTrigger value="company">Company</TabsTrigger>
-              )}
             </TabsList>
             
-            <TabsContent value="details" className="space-y-4 mt-4">
+            <TabsContent value="resume" className="space-y-4 mt-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Profile Details</CardTitle>
-                  <CardDescription>Update your personal information</CardDescription>
+                  <CardTitle>Resume</CardTitle>
+                  <CardDescription>Your professional experience and education</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first_name">First Name</Label>
-                      <Input 
-                        id="first_name" 
-                        {...register("first_name", { required: true })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="last_name">Last Name</Label>
-                      <Input 
-                        id="last_name" 
-                        {...register("last_name", { required: true })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
-                      <Input 
-                        id="location" 
-                        {...register("location")}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea 
-                        id="bio" 
-                        {...register("bio")}
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="w-full" disabled={isUpdating}>
-                      {isUpdating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        'Update Profile'
-                      )}
-                    </Button>
-                  </form>
+                  <div className="space-y-4">
+                    {user.resume_url ? (
+                      <div className="flex items-center justify-between">
+                        <a 
+                          href={user.resume_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          View Current Resume
+                        </a>
+                        <Input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx"
+                          id="resume-upload"
+                          onChange={(e) => handleFileUpload(e, 'resume')}
+                        />
+                        <Label
+                          htmlFor="resume-upload"
+                          className="cursor-pointer"
+                        >
+                          <Button variant="outline" disabled={isUploading}>
+                            {isUploading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              'Update Resume'
+                            )}
+                          </Button>
+                        </Label>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx"
+                          id="resume-upload"
+                          onChange={(e) => handleFileUpload(e, 'resume')}
+                        />
+                        <Label
+                          htmlFor="resume-upload"
+                          className="cursor-pointer"
+                        >
+                          <Button>Upload Resume</Button>
+                        </Label>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -337,19 +282,16 @@ const Profile = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Skills</CardTitle>
-                  <CardDescription>Add or remove skills from your profile</CardDescription>
+                  <CardDescription>Technical skills and competencies</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <SkillsSection userId={user?.id} initialSkills={userSkills} />
+                  <div className="space-y-4">
+                    {/* Skills management will be implemented in the next iteration */}
+                    <p className="text-muted-foreground">Skills management coming soon...</p>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
-
-            {user?.role === 'referrer' && (
-              <TabsContent value="company" className="space-y-4 mt-4">
-                <CompanySection userId={user?.id} currentCompany={userCompany || undefined} />
-              </TabsContent>
-            )}
           </Tabs>
         </div>
       </div>
