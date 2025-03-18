@@ -1,151 +1,181 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
-import {
-  Building,
-  Home,
-  LogOut,
-  Menu,
-  MessageSquare,
-  Settings,
-  User,
-  Users,
-} from "lucide-react";
 
-const navigation = [
-  { name: "Dashboard", href: "/app/dashboard", icon: Home },
-  { name: "Companies", href: "/app/companies", icon: Building },
-  { name: "Members", href: "/app/members", icon: Users },
-  { name: "Messages", href: "/app/messages", icon: MessageSquare },
-  { name: "Profile", href: "/app/profile", icon: User },
-  { name: "Settings", href: "/app/settings", icon: Settings },
-];
+import { Outlet, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { 
+  Briefcase, 
+  Home, 
+  User, 
+  Menu, 
+  X, 
+  Building, 
+  MessageSquare, 
+  LogOut, 
+  Bell,
+  FileText 
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const DashboardLayout = () => {
-  const { user } = useAuth();
-  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  const getInitials = () => {
+    if (!user) return "U";
+    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+  };
+
+  const menuItems = [
+    { path: "/app", icon: Home, label: "Dashboard" },
+    { path: "/app/jobs", icon: Briefcase, label: "Job Listings" },
+    { path: "/app/companies", icon: Building, label: "Companies" },
+    { path: "/app/chat", icon: MessageSquare, label: "Messages", badge: "3" },
+    { path: "/app/referrals", icon: FileText, label: "Referrals" },
+    { path: "/app/profile", icon: User, label: "Profile" },
+  ];
+
   return (
-    <div className="min-h-screen flex dark:bg-background">
+    <div className="min-h-screen flex relative bg-background">
+      {/* Mobile Sidebar Toggle */}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="fixed top-4 left-4 z-50 lg:hidden" 
+        onClick={toggleSidebar}
+      >
+        {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      </Button>
+
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow w-72 gap-y-5 overflow-y-auto border-r px-6 pb-4">
-          <div className="flex h-16 items-center">
-            <Link to="/app/dashboard" className="text-xl font-bold">
-              ReferralHub
-            </Link>
+      <aside 
+        className={`w-64 bg-sidebar border-r border-sidebar-border h-screen fixed lg:relative transition-all duration-300 ease-in-out z-40 ${
+          isSidebarOpen ? "left-0" : "-left-64 lg:left-0"
+        }`}
+      >
+        <div className="p-6 flex flex-col h-full">
+          <div className="flex items-center mb-8">
+            <Briefcase className="w-6 h-6 text-primary mr-2" />
+            <h1 className="text-xl font-bold">JobReferral</h1>
           </div>
           
-          {user && (
-            <div className="px-3 py-2">
-              <div className="space-y-1">
-                <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
-                  Welcome, {user.first_name}!
-                </h2>
-                <nav className="space-y-1">
-                  {navigation.map((item) => (
-                    <NavigationLink key={item.name} item={item} />
-                  ))}
-                </nav>
+          <nav className="space-y-1 flex-1">
+            {menuItems.map((item) => (
+              <Link 
+                key={item.path}
+                to={item.path} 
+                className="flex items-center justify-between px-4 py-3 text-sm rounded-md hover:bg-sidebar-accent group transition-colors"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <div className="flex items-center">
+                  <item.icon className="w-5 h-5 mr-3 text-muted-foreground group-hover:text-foreground" />
+                  {item.label}
+                </div>
+                {item.badge && (
+                  <Badge variant="secondary" className="ml-2 px-2 py-0 text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </Link>
+            ))}
+          </nav>
+          
+          <div className="mt-auto pt-4 border-t border-sidebar-border">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm text-muted-foreground">Theme</span>
+              <ThemeToggle />
+            </div>
+            
+            {user && (
+              <div className="flex items-center mt-4">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.avatar} alt={`${user.firstName} ${user.lastName}`} />
+                  <AvatarFallback>{getInitials()}</AvatarFallback>
+                </Avatar>
+                <div className="ml-2 flex-1 overflow-hidden">
+                  <p className="text-sm font-medium truncate">{`${user.firstName} ${user.lastName}`}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile header */}
-      <div className="lg:hidden sticky top-0 z-40 flex items-center gap-x-6 bg-background px-4 py-4 shadow-sm sm:px-6">
-        {user && (
-          <div className="flex items-center gap-x-4">
-            <Avatar>
-              <AvatarImage src={user.avatar_url} alt={`${user.first_name} ${user.last_name}`} />
-              <AvatarFallback>{`${user.first_name[0]}${user.last_name[0]}`}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold leading-6">{`${user.first_name} ${user.last_name}`}</span>
-              <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
-            </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </aside>
 
       {/* Main content */}
-      <div className="lg:pl-72 flex-1">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="lg:hidden">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left">
-            <div className="flex flex-col space-y-4 py-4">
-              {user && (
-                <div className="px-3 py-2">
-                  <div className="flex items-center gap-x-4 mb-4">
-                    <Avatar>
-                      <AvatarImage src={user.avatar_url} alt={`${user.first_name}`} />
-                      <AvatarFallback>{`${user.first_name[0]}${user.last_name[0]}`}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="text-sm font-semibold">{`${user.first_name} ${user.last_name}`}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{user.role}</div>
-                    </div>
-                  </div>
-                  <nav className="flex flex-col space-y-1">
-                    {navigation.map((item) => (
-                      <NavigationLink key={item.name} item={item} />
-                    ))}
-                  </nav>
-                </div>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-        <main className="py-10">
-          <div className="px-4 sm:px-6 lg:px-8">
-            <Outlet />
+      <main className="flex-1 p-4 lg:p-8 min-h-screen overflow-auto">
+        <div className="max-w-7xl mx-auto">
+          {/* Top navbar for mobile */}
+          <div className="lg:hidden flex justify-end items-center mb-6 pt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-2">
+                  <Bell className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  New referral request from Jane
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Message from recruiter at Google
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="ml-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatar} alt={user?.firstName} />
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{`${user?.firstName} ${user?.lastName}`}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/app/profile")}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </main>
-      </div>
+          
+          <Outlet />
+        </div>
+      </main>
     </div>
-  );
-};
-
-const NavigationLink = ({ item }: { item: typeof navigation[0] }) => {
-  const location = useLocation();
-  const isActive = location.pathname === item.href;
-  const { logout } = useAuth();
-
-  if (item.name === "Logout") {
-    return (
-      <Button
-        variant="ghost"
-        className={cn(
-          "w-full justify-start gap-x-3",
-          isActive && "bg-accent text-accent-foreground"
-        )}
-        onClick={logout}
-      >
-        <LogOut className="h-4 w-4" />
-        {item.name}
-      </Button>
-    );
-  }
-
-  return (
-    <Link
-      to={item.href}
-      className={cn(
-        "group flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-        isActive && "bg-accent text-accent-foreground"
-      )}
-    >
-      <item.icon className="mr-3 h-4 w-4" />
-      <span>{item.name}</span>
-    </Link>
   );
 };
 
