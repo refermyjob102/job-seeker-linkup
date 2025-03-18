@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
@@ -76,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             first_name: userData.first_name,
             last_name: userData.last_name,
-            role: userData.role,
+            role: userData.role as UserRole,
           }
         }
       });
