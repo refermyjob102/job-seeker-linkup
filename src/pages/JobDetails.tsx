@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -195,9 +196,9 @@ const JobDetails = () => {
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-start justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start justify-between space-y-4 sm:space-y-0">
               <div>
-                <CardTitle className="text-2xl">{job.title}</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">{job.title}</CardTitle>
                 <div className="flex items-center mt-2">
                   <Building className="h-4 w-4 mr-1 text-muted-foreground" />
                   <CardDescription className="text-base">
@@ -228,7 +229,7 @@ const JobDetails = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Location</p>
                   <div className="flex items-center">

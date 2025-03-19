@@ -278,7 +278,7 @@ const JobListings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Job Listings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Job Listings</h1>
         <p className="text-muted-foreground">
           Find your next opportunity and connect with referrers
         </p>
@@ -287,8 +287,8 @@ const JobListings = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Filters */}
         <Card className="md:col-span-1 h-fit">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
+          <CardContent className="p-4 sm:p-6">
+            <form onSubmit={handleSearch} className="space-y-4 sm:space-y-6">
               <div className="space-y-3">
                 <h3 className="font-medium">Search</h3>
                 <div className="relative">
@@ -397,15 +397,15 @@ const JobListings = () => {
           {filteredJobs.length > 0 ? (
             filteredJobs.map((job) => (
               <Card key={job.id} className="card-hover">
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col md:flex-row gap-4">
-                    <div className="bg-muted flex items-center justify-center p-4 rounded-md h-16 w-16">
+                    <div className="bg-muted flex items-center justify-center p-4 rounded-md h-16 w-16 mx-auto md:mx-0">
                       <Building className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <div className="flex-1">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2 text-center md:text-left">
                         <h3 className="font-semibold text-lg">{job.title}</h3>
-                        <div className="flex items-center">
+                        <div className="flex items-center justify-center md:justify-end">
                           {job.hasReferrer && (
                             <Badge variant="outline" className="mr-2 text-green-600 bg-green-50 hover:bg-green-50">
                               Referrer Available
@@ -416,7 +416,7 @@ const JobListings = () => {
                           </Button>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-y-2 gap-x-4 mb-3 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap justify-center md:justify-start gap-y-2 gap-x-4 mb-3 text-sm text-muted-foreground">
                         <div className="flex items-center">
                           <Building className="h-4 w-4 mr-1" />
                           {job.company}
@@ -434,10 +434,10 @@ const JobListings = () => {
                           {job.type}
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2 text-center md:text-left">
                         {job.description}
                       </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
                         {job.tags.map((tag, index) => (
                           <Badge key={index} variant="secondary">{tag}</Badge>
                         ))}
