@@ -6,75 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Building, MapPin, Search, Star, Users, Briefcase } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-// Mock companies data
-const companyData = [
-  {
-    id: "1",
-    name: "Google",
-    logo: "/placeholder.svg",
-    description: "Google is a multinational technology company specializing in Internet-related services and products.",
-    industry: "Technology",
-    location: "Mountain View, CA",
-    employees: "100,000+",
-    referrers: 28,
-    jobOpenings: 124,
-    isFeatured: true,
-  },
-  {
-    id: "2",
-    name: "Meta",
-    logo: "/placeholder.svg",
-    description: "Meta Platforms, Inc., doing business as Meta, is an American multinational technology conglomerate.",
-    industry: "Technology",
-    location: "Menlo Park, CA",
-    employees: "50,000+",
-    referrers: 19,
-    jobOpenings: 87,
-    isFeatured: true,
-  },
-  {
-    id: "3",
-    name: "Apple",
-    logo: "/placeholder.svg",
-    description: "Apple Inc. is an American multinational technology company that designs, develops, and sells consumer electronics, computer software, and online services.",
-    industry: "Technology",
-    location: "Cupertino, CA",
-    employees: "150,000+",
-    referrers: 32,
-    jobOpenings: 156,
-    isFeatured: true,
-  },
-  {
-    id: "4",
-    name: "Amazon",
-    logo: "/placeholder.svg",
-    description: "Amazon.com, Inc. is an American multinational technology company focusing on e-commerce, cloud computing, online advertising, digital streaming, and artificial intelligence.",
-    industry: "E-commerce, Technology",
-    location: "Seattle, WA",
-    employees: "1,500,000+",
-    referrers: 47,
-    jobOpenings: 203,
-    isFeatured: false,
-  },
-  {
-    id: "5",
-    name: "Microsoft",
-    logo: "/placeholder.svg",
-    description: "Microsoft Corporation is an American multinational technology corporation that produces computer software, consumer electronics, personal computers, and related services.",
-    industry: "Technology",
-    location: "Redmond, WA",
-    employees: "180,000+",
-    referrers: 38,
-    jobOpenings: 179,
-    isFeatured: false,
-  },
-];
+import { topCompanies } from "@/data/topCompanies";
 
 const Companies = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredCompanies, setFilteredCompanies] = useState(companyData);
+  const [filteredCompanies, setFilteredCompanies] = useState<typeof topCompanies>([]);
   const [savedCompanies, setSavedCompanies] = useState<string[]>([]);
+
+  // Convert topCompanies to company data format
+  const companyData = topCompanies.map(company => ({
+    id: company.id,
+    name: company.name,
+    logo: "/placeholder.svg",
+    description: `${company.name} is a leading company in the ${company.sector} sector.`,
+    industry: company.sector,
+    location: company.sector === "Technology" ? "Silicon Valley, CA" : 
+              company.sector === "Finance" ? "New York, NY" : 
+              company.sector === "Healthcare" ? "Boston, MA" : "USA",
+    employees: Math.floor(Math.random() * 100000) + 1000 + "+",
+    referrers: Math.floor(Math.random() * 40) + 5,
+    jobOpenings: Math.floor(Math.random() * 200) + 10,
+    isFeatured: parseInt(company.id) <= 10, // First 10 companies are featured
+  }));
 
   useEffect(() => {
     // Initialize with all companies
@@ -89,11 +42,12 @@ const Companies = () => {
       return;
     }
     
+    const searchTermLower = searchTerm.toLowerCase();
     const results = companyData.filter(company => 
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.description.toLowerCase().includes(searchTerm.toLowerCase())
+      company.name.toLowerCase().includes(searchTermLower) ||
+      company.industry.toLowerCase().includes(searchTermLower) ||
+      company.location.toLowerCase().includes(searchTermLower) ||
+      company.description.toLowerCase().includes(searchTermLower)
     );
     
     setFilteredCompanies(results);
@@ -139,7 +93,7 @@ const Companies = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Featured Companies</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {companyData.filter(company => company.isFeatured).map((company) => (
+              {companyData.filter(company => company.isFeatured).slice(0, 6).map((company) => (
                 <Card key={company.id} className="overflow-hidden">
                   <CardContent className="p-0">
                     <div className="h-24 bg-muted flex items-center justify-center">

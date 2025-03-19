@@ -1,12 +1,13 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Send } from "lucide-react";
+import { Send, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 // Mock chat data
 const mockChats = [
@@ -114,13 +115,122 @@ const mockChats = [
   },
 ];
 
+// Utility function to create a websocket connection
+const createChatConnection = (userId: string, onMessageReceived: (message: any) => void) => {
+  // For demo purposes, we'll use a mock WebSocket
+  console.log(`Creating chat connection for user ${userId}`);
+  
+  // This would normally be a real WebSocket connection
+  const mockSocket = {
+    send: (data: string) => {
+      console.log(`Mock WebSocket sending: ${data}`);
+      // In a real implementation, this would send data to the server
+    },
+    close: () => {
+      console.log("Mock WebSocket closed");
+    }
+  };
+  
+  // Simulate receiving messages
+  const simulateMessageReceived = (chatId: string) => {
+    const randomResponses = [
+      "Thanks for your message. I'll get back to you soon.",
+      "That sounds interesting! Can you tell me more?",
+      "I've forwarded your request to our hiring team.",
+      "Let me know if you have any other questions!",
+      "Could you share your resume with me?",
+      "Have you applied to the position yet?"
+    ];
+    
+    setTimeout(() => {
+      const response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
+      const message = {
+        id: `sim-${Date.now()}`,
+        chatId: chatId,
+        senderId: chatId, // The chat ID corresponds to the other user's ID
+        text: response,
+        timestamp: new Date()
+      };
+      
+      onMessageReceived(message);
+    }, 3000 + Math.random() * 5000); // Random delay between 3-8 seconds
+  };
+  
+  return {
+    socket: mockSocket,
+    simulateResponse: simulateMessageReceived
+  };
+};
+
 const Chat = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [chats, setChats] = useState(mockChats);
   const [currentChat, setCurrentChat] = useState<typeof mockChats[0] | null>(null);
   const [message, setMessage] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatConnectionRef = useRef<any>(null);
 
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [currentChat?.messages]);
+
+  // Setup the chat connection when the component loads
+  useEffect(() => {
+    if (user) {
+      const handleMessageReceived = (message: any) => {
+        if (currentChat && message.chatId === currentChat.id) {
+          // Update the current chat with the new message
+          const updatedChat = {
+            ...currentChat,
+            lastMessage: message.text,
+            timestamp: message.timestamp,
+            messages: [
+              ...currentChat.messages,
+              {
+                id: message.id,
+                sender: message.senderId,
+                text: message.text,
+                timestamp: message.timestamp
+              }
+            ]
+          };
+          
+          setCurrentChat(updatedChat);
+          
+          // Also update the chat in the chats list
+          setChats(chats.map(chat => 
+            chat.id === updatedChat.id ? updatedChat : chat
+          ));
+          
+          // Show a notification
+          toast({
+            title: "New message",
+            description: `${currentChat.name}: ${message.text.substring(0, 50)}${message.text.length > 50 ? '...' : ''}`,
+          });
+        }
+      };
+      
+      chatConnectionRef.current = createChatConnection(user.id, handleMessageReceived);
+      setConnectionStatus("connected");
+      
+      return () => {
+        if (chatConnectionRef.current) {
+          chatConnectionRef.current.socket.close();
+          setConnectionStatus("disconnected");
+        }
+      };
+    }
+  }, [user, toast]);
+
+  // Set the current chat when the ID changes
   useEffect(() => {
     if (id) {
       const chat = mockChats.find(chat => chat.id === id);
@@ -153,6 +263,7 @@ const Chat = () => {
   const handleSendMessage = () => {
     if (!message.trim() || !currentChat || !user) return;
     
+    // Create the new message
     const newMessage = {
       id: `m${currentChat.messages.length + 1}`,
       sender: user.id,
@@ -160,6 +271,7 @@ const Chat = () => {
       timestamp: new Date(),
     };
     
+    // Update the current chat with the new message
     const updatedChat = {
       ...currentChat,
       lastMessage: message,
@@ -167,11 +279,25 @@ const Chat = () => {
       messages: [...currentChat.messages, newMessage],
     };
     
+    // Update state
     setChats(chats.map(chat => 
       chat.id === currentChat.id ? updatedChat : chat
     ));
     setCurrentChat(updatedChat);
     setMessage("");
+    
+    // Simulate sending the message via WebSocket
+    if (chatConnectionRef.current) {
+      chatConnectionRef.current.socket.send(JSON.stringify({
+        action: "sendMessage",
+        chatId: currentChat.id,
+        text: message,
+        timestamp: new Date()
+      }));
+      
+      // Simulate receiving a response
+      chatConnectionRef.current.simulateResponse(currentChat.id);
+    }
   };
 
   return (
@@ -183,8 +309,14 @@ const Chat = () => {
         <div className="col-span-1 bg-card rounded-lg shadow">
           <div className="p-4 border-b">
             <h2 className="font-semibold text-lg">Recent Conversations</h2>
+            <div className="flex items-center mt-1">
+              <div className={`h-2 w-2 rounded-full mr-2 ${connectionStatus === "connected" ? "bg-green-500" : "bg-red-500"}`}></div>
+              <span className="text-xs text-muted-foreground">
+                {connectionStatus === "connected" ? "Connected" : "Disconnected"}
+              </span>
+            </div>
           </div>
-          <div className="divide-y">
+          <div className="divide-y max-h-[60vh] overflow-y-auto">
             {chats.map((chat) => (
               <div 
                 key={chat.id}
@@ -199,7 +331,7 @@ const Chat = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between">
                       <h3 className="font-medium truncate">{chat.name}</h3>
-                      <span className="text-xs text-muted-foreground">{formatDate(chat.timestamp)}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(chat.timestamp)}</span>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{chat.company} • {chat.jobTitle}</p>
                     <p className="text-sm truncate">{chat.lastMessage}</p>
@@ -253,6 +385,7 @@ const Chat = () => {
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </CardContent>
               
               <CardFooter className="p-3 border-t">
@@ -281,8 +414,10 @@ const Chat = () => {
             </Card>
           ) : (
             <Card className="h-full flex items-center justify-center">
-              <CardContent className="text-center text-muted-foreground">
-                <p>Select a conversation to start chatting</p>
+              <CardContent className="text-center text-muted-foreground p-8">
+                <Info className="h-12 w-12 mx-auto mb-4 text-muted-foreground/70" />
+                <h3 className="text-lg font-medium mb-2">No conversation selected</h3>
+                <p>Select a conversation from the list to start chatting</p>
               </CardContent>
             </Card>
           )}

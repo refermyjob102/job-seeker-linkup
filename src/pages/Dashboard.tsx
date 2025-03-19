@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Briefcase, User, Users, Building, Bell, ArrowRight } from "lucide-react";
+import { Briefcase, User2, Users, Building, Bell, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,12 +68,12 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profile Completion</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <User2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{profileCompletion}%</div>
             <Progress value={profileCompletion} className="h-2 mt-2" />
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-xs text-muted-foreground mt-2 truncate overflow-hidden">
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs" 
@@ -81,7 +81,7 @@ const Dashboard = () => {
               >
                 {profileCompletion < 100 ? 'Complete your profile to improve matches' : 'View your complete profile'}
               </Button>
-            </p>
+            </div>
           </CardContent>
         </Card>
         
@@ -94,7 +94,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeApplications}</div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-xs text-muted-foreground mt-2 truncate overflow-hidden">
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs"
@@ -104,7 +104,7 @@ const Dashboard = () => {
                   ? "3 new applications this week" 
                   : "2 new referral requests this week"}
               </Button>
-            </p>
+            </div>
           </CardContent>
         </Card>
         
@@ -117,17 +117,17 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{availableReferrers}</div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-xs text-muted-foreground mt-2 truncate overflow-hidden">
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs"
-                onClick={() => navigate("/app/companies")}
+                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : "/app/companies/1")}
               >
                 {user?.role === "seeker" 
                   ? "+12 from last week" 
                   : "View all team members"}
               </Button>
-            </p>
+            </div>
           </CardContent>
         </Card>
         
@@ -140,7 +140,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{targetCompanies}</div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-xs text-muted-foreground mt-2 truncate overflow-hidden">
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs"
@@ -150,7 +150,7 @@ const Dashboard = () => {
                   ? "5 have active referrers" 
                   : "View company profile"}
               </Button>
-            </p>
+            </div>
           </CardContent>
         </Card>
       </div>

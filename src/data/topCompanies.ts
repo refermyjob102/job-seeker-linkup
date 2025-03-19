@@ -86,3 +86,14 @@ export const searchCompaniesByName = (query: string) => {
     company.name.toLowerCase().includes(lowercaseQuery)
   );
 };
+
+// Get company by ID
+export const getCompanyById = (id: string) => {
+  return topCompanies.find(company => company.id === id);
+};
+
+// Helper to get company name by ID
+export const getCompanyNameById = (id: string) => {
+  const company = topCompanies.find(company => company.id === id);
+  return company ? company.name : "";
+};
