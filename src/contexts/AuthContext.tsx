@@ -14,6 +14,9 @@ interface AuthContextType {
   register: (userData: Partial<Profile>, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  isProfileComplete: () => boolean;
+  isNewUser: boolean;
+  setIsNewUser: (value: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -64,6 +68,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isProfileComplete = () => {
+    if (!user) return false;
+    
+    return !!(
+      user.first_name && 
+      user.last_name && 
+      user.email &&
+      user.bio && 
+      user.location
+    );
+  };
+
   const register = async (userData: Partial<Profile>, password: string) => {
     setIsLoading(true);
     setError(null);
@@ -86,6 +102,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authData.user) {
         // The trigger will create the profile automatically
         await fetchProfile(authData.user.id);
+        
+        // Set as new user to trigger profile completion prompt
+        setIsNewUser(true);
         
         toast({
           title: "Registration successful!",
@@ -150,7 +169,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearError = () => setError(null);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout, clearError }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      error, 
+      login, 
+      register, 
+      logout, 
+      clearError, 
+      isProfileComplete, 
+      isNewUser, 
+      setIsNewUser 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -73,7 +73,7 @@ const JobDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isProfileComplete } = useAuth();
   
   // In a real app, we would fetch the job details using the id
   const job = jobMock;
@@ -89,6 +89,17 @@ const JobDetails = () => {
         variant: "destructive",
       });
       navigate("/login", { state: { from: `/app/jobs/${id}` } });
+      return;
+    }
+    
+    // Check if profile is complete before allowing referral request
+    if (!isProfileComplete()) {
+      toast({
+        title: "Incomplete Profile",
+        description: "Please complete your profile before requesting a referral.",
+        variant: "destructive",
+      });
+      navigate("/app/profile");
       return;
     }
     
@@ -118,6 +129,7 @@ const JobDetails = () => {
 
   
   return (
+    
     <div className="space-y-6">
       <div>
         <Link 
@@ -333,21 +345,21 @@ const JobDetails = () => {
               <div className="space-y-4">
                 <div className="group">
                   <h4 className="font-medium group-hover:text-primary transition-colors">
-                    <Link to="#">Frontend Developer</Link>
+                    <Link to="/app/jobs/2">Frontend Developer</Link>
                   </h4>
                   <p className="text-sm text-muted-foreground">InnovateTech • Remote</p>
                 </div>
                 <Separator />
                 <div className="group">
                   <h4 className="font-medium group-hover:text-primary transition-colors">
-                    <Link to="#">React Developer</Link>
+                    <Link to="/app/jobs/3">React Developer</Link>
                   </h4>
                   <p className="text-sm text-muted-foreground">DesignHub • San Francisco, CA</p>
                 </div>
                 <Separator />
                 <div className="group">
                   <h4 className="font-medium group-hover:text-primary transition-colors">
-                    <Link to="#">Senior UI Engineer</Link>
+                    <Link to="/app/jobs/4">Senior UI Engineer</Link>
                   </h4>
                   <p className="text-sm text-muted-foreground">TechGiant • New York, NY</p>
                 </div>

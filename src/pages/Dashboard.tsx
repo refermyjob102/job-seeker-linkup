@@ -22,16 +22,31 @@ const notifications = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isProfileComplete } = useAuth();
   const [profileCompletion, setProfileCompletion] = useState(75);
   const [activeApplications, setActiveApplications] = useState(12);
   const [availableReferrers, setAvailableReferrers] = useState(83);
   const [targetCompanies, setTargetCompanies] = useState(8);
   
+  // Calculate profile completion percentage
+  useEffect(() => {
+    if (user) {
+      let completionFields = 0;
+      let totalFields = 5; // total number of important profile fields
+      
+      if (user.first_name) completionFields++;
+      if (user.last_name) completionFields++;
+      if (user.email) completionFields++;
+      if (user.bio) completionFields++;
+      if (user.location) completionFields++;
+      
+      setProfileCompletion(Math.round((completionFields / totalFields) * 100));
+    }
+  }, [user]);
+  
   // Just for demo purposes, we'll use a different set of stats for referrers
   useEffect(() => {
     if (user?.role === "referrer") {
-      setProfileCompletion(90);
       setActiveApplications(8); // Pending referrals for referrers
       setAvailableReferrers(14); // Team members also referring
       setTargetCompanies(1); // Their company
@@ -64,7 +79,7 @@ const Dashboard = () => {
                 className="p-0 h-auto text-xs" 
                 onClick={() => navigate("/app/profile")}
               >
-                Complete your profile to improve matches
+                {profileCompletion < 100 ? 'Complete your profile to improve matches' : 'View your complete profile'}
               </Button>
             </p>
           </CardContent>
@@ -106,7 +121,7 @@ const Dashboard = () => {
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs"
-                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : "/app/companies")}
+                onClick={() => navigate("/app/companies")}
               >
                 {user?.role === "seeker" 
                   ? "+12 from last week" 
@@ -129,7 +144,7 @@ const Dashboard = () => {
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs"
-                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : `/app/companies/${user?.company}`)}
+                onClick={() => navigate(user?.role === "seeker" ? "/app/companies" : "/app/companies/1")}
               >
                 {user?.role === "seeker" 
                   ? "5 have active referrers" 
