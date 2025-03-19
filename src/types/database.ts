@@ -9,6 +9,20 @@ export interface Profile {
   resume_url?: string;
   location?: string;
   bio?: string;
+  job_title?: string;
+  department?: string;
+  years_experience?: string;
+  education?: string;
+  skills?: string;
+  languages?: string;
+  interests?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  twitter_url?: string;
+  website_url?: string;
+  available_for_referrals?: boolean;
+  open_to_work?: boolean;
+  company?: string;
   created_at: string;
   updated_at: string;
 }

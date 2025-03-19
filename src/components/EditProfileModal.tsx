@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { topCompanies } from "@/data/topCompanies";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -29,10 +31,19 @@ const EditProfileModal = ({
     bio: "",
     location: "",
     company: "",
+    job_title: "",
+    department: "",
+    years_experience: "",
+    education: "",
+    skills: "",
+    languages: "",
+    interests: "",
     linkedin_url: "",
     github_url: "",
     twitter_url: "",
     website_url: "",
+    available_for_referrals: false,
+    open_to_work: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,15 +55,24 @@ const EditProfileModal = ({
         bio: profile.bio || "",
         location: profile.location || "",
         company: profile.company || "",
+        job_title: profile.job_title || "",
+        department: profile.department || "",
+        years_experience: profile.years_experience || "",
+        education: profile.education || "",
+        skills: profile.skills || "",
+        languages: profile.languages || "",
+        interests: profile.interests || "",
         linkedin_url: profile.linkedin_url || "",
         github_url: profile.github_url || "",
         twitter_url: profile.twitter_url || "",
         website_url: profile.website_url || "",
+        available_for_referrals: profile.available_for_referrals || false,
+        open_to_work: profile.open_to_work || false,
       });
     }
   }, [profile]);
 
-  const handleInputChange = (name: string, value: string) => {
+  const handleInputChange = (name: string, value: string | boolean) => {
     setFormData({
       ...formData,
       [name]: value,
@@ -92,7 +112,7 @@ const EditProfileModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
@@ -101,112 +121,232 @@ const EditProfileModal = ({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                type="text"
-                id="firstName"
-                value={formData.first_name}
-                onChange={(e) => handleInputChange("first_name", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                type="text"
-                id="lastName"
-                value={formData.last_name}
-                onChange={(e) => handleInputChange("last_name", e.target.value)}
-              />
-            </div>
-          </div>
+          <Tabs defaultValue="personal" className="w-full">
+            <TabsList className="grid grid-cols-4 mb-4">
+              <TabsTrigger value="personal">Personal</TabsTrigger>
+              <TabsTrigger value="professional">Professional</TabsTrigger>
+              <TabsTrigger value="skills">Skills & Education</TabsTrigger>
+              <TabsTrigger value="social">Social</TabsTrigger>
+            </TabsList>
 
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={formData.bio}
-              onChange={(e) => handleInputChange("bio", e.target.value)}
-              placeholder="Tell us a bit about yourself"
-            />
-          </div>
+            {/* Personal Tab */}
+            <TabsContent value="personal" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    type="text"
+                    id="firstName"
+                    value={formData.first_name}
+                    onChange={(e) => handleInputChange("first_name", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    type="text"
+                    id="lastName"
+                    value={formData.last_name}
+                    onChange={(e) => handleInputChange("last_name", e.target.value)}
+                  />
+                </div>
+              </div>
 
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input
-              type="text"
-              id="location"
-              value={formData.location}
-              onChange={(e) => handleInputChange("location", e.target.value)}
-              placeholder="Your city, state, or country"
-            />
-          </div>
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => handleInputChange("bio", e.target.value)}
+                  placeholder="Tell us a bit about yourself"
+                  rows={4}
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="company">Company</Label>
-            <Select 
-              onValueChange={(value) => handleInputChange("company", value)} 
-              value={formData.company}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a company" />
-              </SelectTrigger>
-              <SelectContent>
-                {companyOptions.map((company) => (
-                  <SelectItem key={company.value} value={company.value}>
-                    {company.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  type="text"
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange("location", e.target.value)}
+                  placeholder="Your city, state, or country"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-              <Input
-                type="url"
-                id="linkedinUrl"
-                value={formData.linkedin_url}
-                onChange={(e) => handleInputChange("linkedin_url", e.target.value)}
-                placeholder="Your LinkedIn profile URL"
-              />
-            </div>
-            <div>
-              <Label htmlFor="githubUrl">GitHub URL</Label>
-              <Input
-                type="url"
-                id="githubUrl"
-                value={formData.github_url}
-                onChange={(e) => handleInputChange("github_url", e.target.value)}
-                placeholder="Your GitHub profile URL"
-              />
-            </div>
-          </div>
+              <div>
+                <Label htmlFor="interests">Interests</Label>
+                <Input
+                  type="text"
+                  id="interests"
+                  value={formData.interests}
+                  onChange={(e) => handleInputChange("interests", e.target.value)}
+                  placeholder="Separate interests with commas"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="twitterUrl">Twitter URL</Label>
-              <Input
-                type="url"
-                id="twitterUrl"
-                value={formData.twitter_url}
-                onChange={(e) => handleInputChange("twitter_url", e.target.value)}
-                placeholder="Your Twitter profile URL"
-              />
-            </div>
-            <div>
-              <Label htmlFor="websiteUrl">Website URL</Label>
-              <Input
-                type="url"
-                id="websiteUrl"
-                value={formData.website_url}
-                onChange={(e) => handleInputChange("website_url", e.target.value)}
-                placeholder="Your personal website URL"
-              />
-            </div>
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="openToWork">Open to Work</Label>
+                  <p className="text-sm text-muted-foreground">Show that you're actively looking for new opportunities</p>
+                </div>
+                <Switch
+                  id="openToWork"
+                  checked={formData.open_to_work}
+                  onCheckedChange={(checked) => handleInputChange("open_to_work", checked)}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Professional Tab */}
+            <TabsContent value="professional" className="space-y-4">
+              <div>
+                <Label htmlFor="company">Company</Label>
+                <Select 
+                  onValueChange={(value) => handleInputChange("company", value)} 
+                  value={formData.company}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companyOptions.map((company) => (
+                      <SelectItem key={company.value} value={company.value}>
+                        {company.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="jobTitle">Job Title</Label>
+                <Input
+                  type="text"
+                  id="jobTitle"
+                  value={formData.job_title}
+                  onChange={(e) => handleInputChange("job_title", e.target.value)}
+                  placeholder="Your current job title"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="department">Department</Label>
+                <Input
+                  type="text"
+                  id="department"
+                  value={formData.department}
+                  onChange={(e) => handleInputChange("department", e.target.value)}
+                  placeholder="Your department"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="yearsExperience">Years of Experience</Label>
+                <Input
+                  type="text"
+                  id="yearsExperience"
+                  value={formData.years_experience}
+                  onChange={(e) => handleInputChange("years_experience", e.target.value)}
+                  placeholder="How many years of experience do you have?"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="availableForReferrals">Available for Referrals</Label>
+                  <p className="text-sm text-muted-foreground">Show that you're willing to provide referrals</p>
+                </div>
+                <Switch
+                  id="availableForReferrals"
+                  checked={formData.available_for_referrals}
+                  onCheckedChange={(checked) => handleInputChange("available_for_referrals", checked)}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Skills & Education Tab */}
+            <TabsContent value="skills" className="space-y-4">
+              <div>
+                <Label htmlFor="skills">Skills</Label>
+                <Textarea
+                  id="skills"
+                  value={formData.skills}
+                  onChange={(e) => handleInputChange("skills", e.target.value)}
+                  placeholder="Separate skills with commas (e.g., React, JavaScript, Project Management)"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="education">Education</Label>
+                <Textarea
+                  id="education"
+                  value={formData.education}
+                  onChange={(e) => handleInputChange("education", e.target.value)}
+                  placeholder="Your educational background"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="languages">Languages</Label>
+                <Input
+                  type="text"
+                  id="languages"
+                  value={formData.languages}
+                  onChange={(e) => handleInputChange("languages", e.target.value)}
+                  placeholder="Languages you speak (e.g., English, Spanish, French)"
+                />
+              </div>
+            </TabsContent>
+
+            {/* Social Tab */}
+            <TabsContent value="social" className="space-y-4">
+              <div>
+                <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+                <Input
+                  type="url"
+                  id="linkedinUrl"
+                  value={formData.linkedin_url}
+                  onChange={(e) => handleInputChange("linkedin_url", e.target.value)}
+                  placeholder="Your LinkedIn profile URL"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="githubUrl">GitHub URL</Label>
+                <Input
+                  type="url"
+                  id="githubUrl"
+                  value={formData.github_url}
+                  onChange={(e) => handleInputChange("github_url", e.target.value)}
+                  placeholder="Your GitHub profile URL"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="twitterUrl">Twitter URL</Label>
+                <Input
+                  type="url"
+                  id="twitterUrl"
+                  value={formData.twitter_url}
+                  onChange={(e) => handleInputChange("twitter_url", e.target.value)}
+                  placeholder="Your Twitter profile URL"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="websiteUrl">Website URL</Label>
+                <Input
+                  type="url"
+                  id="websiteUrl"
+                  value={formData.website_url}
+                  onChange={(e) => handleInputChange("website_url", e.target.value)}
+                  placeholder="Your personal website URL"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
