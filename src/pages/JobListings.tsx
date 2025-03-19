@@ -11,7 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { RequestReferralModal } from "@/components/RequestReferralModal";
+import RequestReferralModal from "@/components/RequestReferralModal";
 
 // Mock job data
 const jobListings = [

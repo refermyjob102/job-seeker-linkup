@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,7 +26,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
-import { RequestReferralModal } from "@/components/RequestReferralModal";
+import RequestReferralModal from "@/components/RequestReferralModal";
 
 // Temporary job data before we implement real data fetching
 const tempJobData = {
