@@ -8,10 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileValidationAlert from "@/components/ProfileValidationAlert";
+import { Briefcase, Building, CheckCheck, UserCog, Upload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { UserRole } from "@/contexts/AuthContext";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -26,6 +33,15 @@ const Profile = () => {
     location: user?.location || '',
   });
   
+  const [showRoleSwitch, setShowRoleSwitch] = useState(false);
+  const [isBothRoles, setIsBothRoles] = useState(false);
+  const [activeRole, setActiveRole] = useState<UserRole>(user?.role || 'seeker');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const [jobTitle, setJobTitle] = useState<string>("");
+  const [currentCompany, setCurrentCompany] = useState<any>(null);
+  
   // Update form data when user data changes
   useEffect(() => {
     if (user) {
@@ -37,7 +53,59 @@ const Profile = () => {
         bio: user.bio || '',
         location: user.location || '',
       });
+      setActiveRole(user.role);
     }
+  }, [user]);
+
+  // Fetch companies for referrer selection
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('*')
+          .order('name');
+          
+        if (error) throw error;
+        setCompanies(data || []);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  // Fetch user's current company if they are a referrer
+  useEffect(() => {
+    const fetchUserCompany = async () => {
+      if (user && user.role === 'referrer') {
+        try {
+          const { data, error } = await supabase
+            .from('company_members')
+            .select(`
+              *,
+              companies(*)
+            `)
+            .eq('user_id', user.id)
+            .single();
+            
+          if (error && error.code !== 'PGRST116') {
+            // PGRST116 is "no rows returned" - not an error for our purposes
+            throw error;
+          }
+          
+          if (data) {
+            setCurrentCompany(data.companies);
+            setJobTitle(data.job_title || '');
+          }
+        } catch (error) {
+          console.error('Error fetching user company:', error);
+        }
+      }
+    };
+
+    fetchUserCompany();
   }, [user]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -69,6 +137,8 @@ const Profile = () => {
     
     if (!user) return;
     
+    setIsSubmitting(true);
+    
     try {
       const { error } = await supabase
         .from('profiles')
@@ -77,6 +147,7 @@ const Profile = () => {
           last_name: formData.lastName,
           bio: formData.bio,
           location: formData.location,
+          role: isBothRoles ? activeRole : formData.role,
         })
         .eq('id', user.id);
       
@@ -95,6 +166,79 @@ const Profile = () => {
         description: "There was an error updating your profile. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCompanySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user || !selectedCompany || !jobTitle) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Check if user already has a company
+      const { data: existingData, error: checkError } = await supabase
+        .from('company_members')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (checkError) throw checkError;
+      
+      if (existingData && existingData.length > 0) {
+        // Update existing record
+        const { error } = await supabase
+          .from('company_members')
+          .update({
+            company_id: selectedCompany,
+            job_title: jobTitle,
+          })
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('company_members')
+          .insert({
+            user_id: user.id,
+            company_id: selectedCompany,
+            job_title: jobTitle,
+          });
+          
+        if (error) throw error;
+      }
+      
+      // Also ensure user role is set to referrer
+      if (user.role !== 'referrer') {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            role: 'referrer',
+          })
+          .eq('id', user.id);
+          
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Company Updated",
+        description: "Your company information has been successfully updated.",
+      });
+      
+      // Refresh the page to show updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating company:', error);
+      toast({
+        title: "Update Failed",
+        description: "There was an error updating your company information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -103,11 +247,121 @@ const Profile = () => {
     return `${user.first_name?.charAt(0) || ''}${user.last_name?.charAt(0) || ''}`;
   };
 
+  const ProfileStatus = () => {
+    if (!user) return null;
+    
+    return (
+      <div className="mb-6">
+        <ProfileValidationAlert profile={user} />
+        
+        {user.role === 'referrer' && !currentCompany && (
+          <Alert className="mb-4 border-amber-200 bg-amber-50">
+            <UserCog className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-800">Company Information Needed</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              As a referrer, please select your company to help job seekers find you.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+    );
+  };
+
+  const ReferrerCompanySection = () => {
+    if (!user || (user.role !== 'referrer' && !isBothRoles)) return null;
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Building className="mr-2 h-5 w-5" />
+            Company Information
+          </CardTitle>
+          <CardDescription>
+            Add your company details to be found by job seekers
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {currentCompany ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="bg-muted h-16 w-16 flex items-center justify-center rounded">
+                  <Building className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium">{currentCompany.name}</h3>
+                  <p className="text-sm text-muted-foreground">{jobTitle}</p>
+                </div>
+              </div>
+              <div className="pt-2">
+                <Button variant="outline" onClick={() => setCurrentCompany(null)}>
+                  Change Company
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleCompanySubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Select 
+                  value={selectedCompany} 
+                  onValueChange={setSelectedCompany}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map(company => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jobTitle">Job Title</Label>
+                <Input 
+                  id="jobTitle" 
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g. Software Engineer, Product Manager" 
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Company Information"}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-8">
       <h1 className="text-3xl font-bold">My Profile</h1>
       
-      <ProfileValidationAlert profile={user} />
+      <ProfileStatus />
+      
+      {user && user.role === 'referrer' && <ReferrerCompanySection />}
+
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-2">
+          <h2 className="text-xl font-semibold">Profile Details</h2>
+          <Badge variant={user?.role === 'seeker' ? "secondary" : "default"}>
+            {user?.role === 'seeker' ? 'Job Seeker' : 'Referrer'}
+          </Badge>
+        </div>
+        
+        {!isEditing && (
+          <Button variant="outline" onClick={handleEditToggle}>
+            Edit Profile
+          </Button>
+        )}
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Profile Summary Card */}
@@ -137,6 +391,13 @@ const Profile = () => {
               <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
               <p>{user?.location || 'Not specified'}</p>
             </div>
+            
+            {user?.bio && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Bio</h3>
+                <p className="text-sm">{user.bio}</p>
+              </div>
+            )}
             
             <Separator />
             
@@ -195,6 +456,57 @@ const Profile = () => {
                   </div>
                   
                   <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="role">Account Type</Label>
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor="bothRoles" className="text-sm">Switch between roles</Label>
+                        <Switch 
+                          id="bothRoles" 
+                          checked={showRoleSwitch}
+                          onCheckedChange={setShowRoleSwitch}
+                        />
+                      </div>
+                    </div>
+                    
+                    {showRoleSwitch ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          You can switch between seeker and referrer roles
+                        </p>
+                        <RadioGroup 
+                          value={activeRole} 
+                          onValueChange={(value: UserRole) => setActiveRole(value)}
+                          className="flex space-x-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="seeker" id="seeker" />
+                            <Label htmlFor="seeker">Job Seeker</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="referrer" id="referrer" />
+                            <Label htmlFor="referrer">Referrer</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    ) : (
+                      <RadioGroup 
+                        value={formData.role} 
+                        onValueChange={(value: UserRole) => setFormData(prev => ({ ...prev, role: value }))}
+                        className="flex space-x-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="seeker" id="seeker" />
+                          <Label htmlFor="seeker">Job Seeker</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="referrer" id="referrer" />
+                          <Label htmlFor="referrer">Referrer</Label>
+                        </div>
+                      </RadioGroup>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     <Input 
                       id="location" 
@@ -221,7 +533,9 @@ const Profile = () => {
                   
                   <div className="flex justify-end space-x-2">
                     <Button type="button" variant="outline" onClick={handleEditToggle}>Cancel</Button>
-                    <Button type="submit">Save Changes</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Saving..." : "Save Changes"}
+                    </Button>
                   </div>
                 </form>
               </CardContent>
@@ -236,9 +550,15 @@ const Profile = () => {
               
               <TabsContent value="resume" className="space-y-4 mt-4">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Resume</CardTitle>
-                    <CardDescription>Your professional experience and education</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Resume</CardTitle>
+                      <CardDescription>Your professional experience and education</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" className="flex items-center">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Resume
+                    </Button>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -284,19 +604,18 @@ const Profile = () => {
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex justify-end">
-                      <Button>Upload New Resume</Button>
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
               
               <TabsContent value="skills" className="mt-4">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Skills</CardTitle>
-                    <CardDescription>Technical skills and competencies</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle>Skills</CardTitle>
+                      <CardDescription>Technical skills and competencies</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm">Add Skills</Button>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -320,10 +639,6 @@ const Profile = () => {
                           <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm">Communication</span>
                           <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-sm">Problem Solving</span>
                         </div>
-                      </div>
-                      
-                      <div className="flex justify-end">
-                        <Button variant="outline">Add Skills</Button>
                       </div>
                     </div>
                   </CardContent>

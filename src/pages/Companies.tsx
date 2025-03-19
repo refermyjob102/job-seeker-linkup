@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,12 @@ const companyData = [
 const Companies = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredCompanies, setFilteredCompanies] = useState(companyData);
+  const [savedCompanies, setSavedCompanies] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Initialize with all companies
+    setFilteredCompanies(companyData);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +97,16 @@ const Companies = () => {
     );
     
     setFilteredCompanies(results);
+  };
+
+  const toggleSaveCompany = (companyId: string) => {
+    setSavedCompanies(prev => {
+      if (prev.includes(companyId)) {
+        return prev.filter(id => id !== companyId);
+      } else {
+        return [...prev, companyId];
+      }
+    });
   };
 
   return (
@@ -132,8 +148,15 @@ const Companies = () => {
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold">{company.name}</h3>
-                        <Button variant="ghost" size="icon">
-                          <Star className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => toggleSaveCompany(company.id)}
+                        >
+                          <Star 
+                            className="h-4 w-4" 
+                            fill={savedCompanies.includes(company.id) ? "currentColor" : "none"}
+                          />
                         </Button>
                       </div>
                       <div className="flex items-center text-sm text-muted-foreground mb-3">
@@ -181,8 +204,15 @@ const Companies = () => {
                             <Badge variant="outline" className="mr-2">
                               {company.industry}
                             </Badge>
-                            <Button variant="ghost" size="icon">
-                              <Star className="h-4 w-4" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => toggleSaveCompany(company.id)}
+                            >
+                              <Star 
+                                className="h-4 w-4" 
+                                fill={savedCompanies.includes(company.id) ? "currentColor" : "none"}
+                              />
                             </Button>
                           </div>
                         </div>

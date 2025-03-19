@@ -11,7 +11,14 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: Partial<Profile>, password: string) => Promise<void>;
+  register: (userData: { 
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: UserRole;
+    company?: string;
+    jobTitle?: string;
+  }, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   isProfileComplete: () => boolean;
@@ -61,7 +68,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) throw error;
-      setUser(data);
+      // Ensure the role is cast to the correct type
+      if (data && (data.role === 'seeker' || data.role === 'referrer')) {
+        setUser(data as Profile);
+      } else {
+        console.error('Invalid user role:', data?.role);
+        setUser(null);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setUser(null);
@@ -80,13 +93,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const register = async (userData: Partial<Profile>, password: string) => {
+  const register = async (userData: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: UserRole;
+    company?: string;
+    jobTitle?: string;
+  }, password: string) => {
     setIsLoading(true);
     setError(null);
     
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email!,
+        email: userData.email,
         password,
         options: {
           data: {

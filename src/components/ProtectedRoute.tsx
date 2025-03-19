@@ -25,7 +25,18 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       navigate("/app/profile");
       setIsNewUser(false); // Reset the flag after redirection
     }
-  }, [user, isNewUser, location.pathname, navigate, setIsNewUser, toast]);
+    
+    // Also check if profile is incomplete and they're trying to access certain pages
+    if (user && !isProfileComplete() && 
+        !location.pathname.includes('/app/profile') && 
+        (location.pathname.includes('/app/jobs') || location.pathname.includes('/app/referrals'))) {
+      toast({
+        title: "Profile Incomplete",
+        description: "Please complete your profile to access this feature.",
+      });
+      navigate("/app/profile");
+    }
+  }, [user, isNewUser, isProfileComplete, location.pathname, navigate, setIsNewUser, toast]);
 
   if (isLoading) {
     // Could return a loading spinner here

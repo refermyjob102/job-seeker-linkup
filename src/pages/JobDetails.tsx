@@ -1,339 +1,372 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Building, DollarSign, Briefcase, Calendar, Clock, Users, User, Star, ArrowLeft, ExternalLink, Share2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import DetailedReferralRequestModal from "@/components/DetailedReferralRequestModal";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Briefcase,
+  Building,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  Globe,
+  MapPin,
+  Star,
+  Users,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Separator } from "@/components/ui/separator";
+import { RequestReferralModal } from "@/components/RequestReferralModal";
 
-// Mock job data - in a real app this would come from an API
-const jobMock = {
-  id: 1,
+// Temporary job data before we implement real data fetching
+const tempJobData = {
+  id: "1",
   title: "Senior Frontend Developer",
   company: "TechCorp",
-  companyLogo: "/placeholder.svg",
-  companyDescription: "TechCorp is a leading technology company focused on developing innovative solutions for enterprises. With a strong focus on user experience and cutting-edge technology, we're transforming how businesses operate in the digital age.",
-  location: "San Francisco, CA",
-  salary: "$120K - $150K",
+  company_id: "1",
+  location: "San Francisco, CA (Remote)",
   type: "Full-time",
-  experience: "5+ years",
-  posted: "2 days ago",
-  description: "We are looking for an experienced Frontend Developer to join our team. You will be responsible for developing and implementing user interface components using React.js and other frontend technologies. The ideal candidate is proficient in JavaScript, has experience with React.js, and is familiar with responsive design principles.",
+  experience_level: "Senior",
+  salary_min: 120000,
+  salary_max: 150000,
+  posted_date: "2023-05-15",
+  expires_at: "2023-06-15",
+  description: "TechCorp is looking for a Senior Frontend Developer to join our growing team. You will be responsible for building user interfaces for our web applications, ensuring they are responsive, accessible, and performant.",
   responsibilities: [
-    "Develop and implement user interface components using React.js and other frontend technologies",
-    "Optimize components for maximum performance across devices and browsers",
-    "Collaborate with the design team to implement visual elements",
-    "Write clean, maintainable code and perform code reviews",
-    "Troubleshoot and debug applications",
-    "Stay up-to-date with emerging trends and technologies"
+    "Build responsive user interfaces using React and TypeScript",
+    "Collaborate with UX/UI designers to implement designs",
+    "Write clean, maintainable, and efficient code",
+    "Perform code reviews and mentor junior developers",
+    "Optimize applications for maximum speed and scalability",
   ],
   requirements: [
-    "5+ years of experience in frontend development",
-    "Strong proficiency in JavaScript and TypeScript",
-    "Experience with React.js and modern frontend frameworks",
-    "Knowledge of responsive design principles",
-    "Familiarity with RESTful APIs and GraphQL",
-    "Understanding of CI/CD pipelines and testing frameworks",
-    "Excellent problem-solving skills and attention to detail"
+    "5+ years of experience with frontend development",
+    "Strong proficiency in JavaScript, HTML, and CSS",
+    "Experience with React, Redux, and TypeScript",
+    "Familiarity with modern frontend build pipelines and tools",
+    "Understanding of cross-browser compatibility issues and solutions",
   ],
   benefits: [
-    "Competitive salary and equity options",
+    "Competitive salary and equity",
     "Health, dental, and vision insurance",
-    "Unlimited PTO policy",
-    "Remote work options",
+    "Unlimited PTO",
+    "Remote work flexibility",
     "Professional development budget",
-    "401(k) matching",
-    "Flexible work hours"
   ],
-  tags: ["React", "TypeScript", "Tailwind CSS", "Frontend", "JavaScript"],
-  referrers: [
-    {
-      id: "2",
-      name: "Jessica Thompson",
-      title: "Engineering Manager at TechCorp",
-      image: "/placeholder.svg",
-      connectionDegree: 1
-    },
-    {
-      id: "3",
-      name: "Michael Chen",
-      title: "Senior Developer at TechCorp",
-      image: "/placeholder.svg",
-      connectionDegree: 2
-    }
-  ]
+  referrers_count: 5,
+  has_applied: false,
 };
 
 const JobDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user, isProfileComplete } = useAuth();
-  
-  // In a real app, we would fetch the job details using the id
-  const job = jobMock;
-  
-  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
-  const [selectedReferrer, setSelectedReferrer] = useState<typeof job.referrers[0] | null>(null);
-  
-  const handleRequestReferral = (referrer?: typeof job.referrers[0]) => {
+  const { toast } = useToast();
+  const [job, setJob] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [savedJob, setSavedJob] = useState(false);
+
+  useEffect(() => {
+    const fetchJobDetails = async () => {
+      setLoading(true);
+      try {
+        // In a real app, we would fetch this from the API
+        // For now, we'll use the tempJobData
+        setTimeout(() => {
+          setJob({...tempJobData, id});
+          setLoading(false);
+        }, 500);
+
+        // This is how the actual implementation would look:
+        /*
+        const { data, error } = await supabase
+          .from('job_listings')
+          .select(`
+            *,
+            companies(id, name, logo_url, location)
+          `)
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setJob(data);
+        */
+      } catch (error) {
+        console.error("Error fetching job details:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load job details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchJobDetails();
+    }
+  }, [id, toast]);
+
+  const handleRequestReferral = () => {
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "Please log in to request a referral.",
+        title: "Authentication required",
+        description: "Please log in to request a referral",
         variant: "destructive",
       });
-      navigate("/login", { state: { from: `/app/jobs/${id}` } });
+      navigate("/login");
       return;
     }
-    
-    // Check if profile is complete before allowing referral request
+
     if (!isProfileComplete()) {
       toast({
-        title: "Incomplete Profile",
-        description: "Please complete your profile before requesting a referral.",
+        title: "Complete your profile",
+        description: "Please complete your profile before requesting a referral",
         variant: "destructive",
       });
       navigate("/app/profile");
       return;
     }
-    
-    if (referrer) {
-      setSelectedReferrer(referrer);
-    } else {
-      setSelectedReferrer(null);
-    }
-    
-    setIsReferralModalOpen(true);
+
+    setReferralModalOpen(true);
   };
-  
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
+
+  const toggleSaveJob = () => {
+    setSavedJob(!savedJob);
     toast({
-      title: "Link Copied",
-      description: "Job link copied to clipboard",
-    });
-  };
-  
-  const handleSave = () => {
-    toast({
-      title: "Job Saved",
-      description: "This job has been saved to your profile",
+      title: savedJob ? "Job removed from saved jobs" : "Job saved successfully",
+      description: savedJob 
+        ? "The job has been removed from your saved jobs" 
+        : "The job has been added to your saved jobs",
     });
   };
 
-  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading job details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="text-center py-12">
+        <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Job Not Found</h2>
+        <p className="text-muted-foreground mb-6">
+          The job listing you're looking for doesn't exist or has been removed.
+        </p>
+        <Button asChild>
+          <Link to="/app/jobs">Back to Job Listings</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    
     <div className="space-y-6">
       <div>
-        <Link 
-          to="/app/jobs" 
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to jobs
-        </Link>
-        
-        <div className="flex flex-col lg:flex-row justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">{job.title}</h1>
-            <div className="flex items-center text-muted-foreground">
-              <Building className="h-4 w-4 mr-1" />
-              <span className="mr-3">{job.company}</span>
-              <MapPin className="h-4 w-4 mr-1" />
-              <span>{job.location}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 self-start">
-            <Button variant="outline" size="sm" onClick={handleShare}>
-              <Share2 className="h-4 w-4 mr-2" /> Share
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleSave}>
-              <Star className="h-4 w-4 mr-2" /> Save
-            </Button>
-            <Button size="sm" onClick={() => handleRequestReferral()}>Request Referral</Button>
-          </div>
+        <div className="flex items-center gap-3 mb-4">
+          <Link to="/app/jobs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Jobs
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-sm font-medium truncate">{job.title}</span>
         </div>
       </div>
 
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+        {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
-          <Tabs defaultValue="description">
-            <TabsList className="mb-4">
-              <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="company">Company</TabsTrigger>
-              <TabsTrigger value="referrers">Referrers ({job.referrers.length})</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="description" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Job Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium mr-2">Salary:</span>
-                      <span>{job.salary}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium mr-2">Job Type:</span>
-                      <span>{job.type}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium mr-2">Experience:</span>
-                      <span>{job.experience}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span className="font-medium mr-2">Posted:</span>
-                      <span>{job.posted}</span>
-                    </div>
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between">
+              <div>
+                <CardTitle className="text-2xl">{job.title}</CardTitle>
+                <div className="flex items-center mt-2">
+                  <Building className="h-4 w-4 mr-1 text-muted-foreground" />
+                  <CardDescription className="text-base">
+                    <Link to={`/app/companies/${job.company_id}`} className="hover:text-primary">
+                      {job.company}
+                    </Link>
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={toggleSaveJob}
+                  className={savedJob ? "text-primary" : ""}
+                >
+                  <Star className="h-4 w-4" fill={savedJob ? "currentColor" : "none"} />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  asChild
+                >
+                  <a href="#" target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <div className="flex items-center">
+                    <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                    <p className="text-sm">{job.location}</p>
                   </div>
-                  
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {job.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary">{tag}</Badge>
-                    ))}
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Job Type</p>
+                  <div className="flex items-center">
+                    <Briefcase className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                    <p className="text-sm">{job.type}</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Experience</p>
+                  <div className="flex items-center">
+                    <Users className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                    <p className="text-sm">{job.experience_level}</p>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Salary</p>
+                  <div className="flex items-center">
+                    <DollarSign className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                    <p className="text-sm">${job.salary_min/1000}K - ${job.salary_max/1000}K</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>Description</CardTitle>
-                </CardHeader>
-                <CardContent className="prose prose-slate max-w-none">
-                  <p>{job.description}</p>
-                  
-                  <h3 className="text-lg font-semibold mt-6 mb-2">Responsibilities</h3>
-                  <ul className="list-disc pl-6 space-y-1">
-                    {job.responsibilities.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                  
-                  <h3 className="text-lg font-semibold mt-6 mb-2">Requirements</h3>
-                  <ul className="list-disc pl-6 space-y-1">
-                    {job.requirements.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                  
-                  <h3 className="text-lg font-semibold mt-6 mb-2">Benefits</h3>
-                  <ul className="list-disc pl-6 space-y-1">
-                    {job.benefits.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="company">
-              <Card>
-                <CardHeader className="flex flex-row items-center space-x-4 space-y-0 pb-2">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={job.companyLogo} alt={job.company} />
-                    <AvatarFallback>{job.company.substring(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle>{job.company}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{job.location}</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p>{job.companyDescription}</p>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" size="sm">
-                      <ExternalLink className="h-4 w-4 mr-2" /> Visit Website
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Users className="h-4 w-4 mr-2" /> View All Jobs
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="referrers">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Available Referrers</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {job.referrers.map((referrer) => (
-                    <div key={referrer.id} className="flex items-start space-x-4 p-4 border rounded-lg">
-                      <Avatar>
-                        <AvatarImage src={referrer.image} alt={referrer.name} />
-                        <AvatarFallback>{referrer.name.substring(0, 2)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-1">
-                        <h4 className="font-medium">{referrer.name}</h4>
-                        <p className="text-sm text-muted-foreground">{referrer.title}</p>
-                        <Badge variant="outline" className="mt-2">
-                          <User className="h-3 w-3 mr-1" />
-                          {referrer.connectionDegree === 1 ? '1st' : `${referrer.connectionDegree}nd`} connection
-                        </Badge>
-                      </div>
-                      <Button onClick={() => handleRequestReferral(referrer)}>
-                        Request Referral
-                      </Button>
-                    </div>
+              <div>
+                <h3 className="text-lg font-medium mb-3">Description</h3>
+                <p className="text-muted-foreground">{job.description}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-3">Responsibilities</h3>
+                <ul className="space-y-2">
+                  {job.responsibilities.map((item: string, index: number) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
                   ))}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-3">Requirements</h3>
+                <ul className="space-y-2">
+                  {job.requirements.map((item: string, index: number) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-medium mb-3">Benefits</h3>
+                <ul className="space-y-2">
+                  {job.benefits.map((item: string, index: number) => (
+                    <li key={index} className="flex items-start">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card className="sticky top-6">
+          <Card>
             <CardHeader>
-              <CardTitle>Request a Referral</CardTitle>
+              <CardTitle>Apply for this position</CardTitle>
+              <CardDescription>
+                Get a referral to increase your chances
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Candidates who get a referral are 3x more likely to hear back from recruiters.
-              </p>
-              
-              <div className="bg-muted/50 p-4 rounded-lg text-sm">
-                <p className="font-medium mb-1">About this role:</p>
-                <ul className="space-y-2">
-                  <li className="flex items-start">
-                    <Users className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <span>{job.referrers.length} referrers available</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Star className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <span>Top rated opportunity</span>
-                  </li>
-                  <li className="flex items-start">
-                    <Calendar className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                    <span>Typically responds within 3 days</span>
-                  </li>
-                </ul>
+              <div className="flex items-center text-sm">
+                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Posted on {job.posted_date}</span>
+              </div>
+              <div className="flex items-center text-sm">
+                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Applications close on {job.expires_at}</span>
+              </div>
+              <div className="flex items-center text-sm">
+                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>
+                  {job.referrers_count} {job.referrers_count === 1 ? 'referrer' : 'referrers'} available
+                </span>
               </div>
               
-              <Button className="w-full" onClick={() => handleRequestReferral()}>
-                Request Referral
+              <div className="pt-2 space-y-2">
+                <Button className="w-full" onClick={handleRequestReferral}>
+                  Request Referral
+                </Button>
+                <Button variant="outline" className="w-full">
+                  Apply Directly
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>About {job.company}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <div className="bg-muted h-16 w-16 flex items-center justify-center rounded-md">
+                  <Building className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center text-sm">
+                  <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <a href="#" className="text-primary hover:underline">company-website.com</a>
+                </div>
+                <div className="flex items-center text-sm">
+                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span>San Francisco, CA</span>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to={`/app/companies/${job.company_id}`}>
+                  View Company Profile
+                </Link>
               </Button>
-              
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                You can request up to 5 referrals per week
-              </p>
             </CardContent>
           </Card>
           
@@ -341,46 +374,33 @@ const JobDetails = () => {
             <CardHeader>
               <CardTitle>Similar Jobs</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="space-y-4">
-                <div className="group">
-                  <h4 className="font-medium group-hover:text-primary transition-colors">
-                    <Link to="/app/jobs/2">Frontend Developer</Link>
-                  </h4>
-                  <p className="text-sm text-muted-foreground">InnovateTech • Remote</p>
+                <div className="border rounded-md p-3 hover:bg-accent/50 transition-colors cursor-pointer">
+                  <h4 className="font-medium text-sm">Frontend Developer</h4>
+                  <p className="text-xs text-muted-foreground">WebDesign Corp • Remote</p>
                 </div>
-                <Separator />
-                <div className="group">
-                  <h4 className="font-medium group-hover:text-primary transition-colors">
-                    <Link to="/app/jobs/3">React Developer</Link>
-                  </h4>
-                  <p className="text-sm text-muted-foreground">DesignHub • San Francisco, CA</p>
+                <div className="border rounded-md p-3 hover:bg-accent/50 transition-colors cursor-pointer">
+                  <h4 className="font-medium text-sm">Senior UI Engineer</h4>
+                  <p className="text-xs text-muted-foreground">TechGiant • New York, NY</p>
                 </div>
-                <Separator />
-                <div className="group">
-                  <h4 className="font-medium group-hover:text-primary transition-colors">
-                    <Link to="/app/jobs/4">Senior UI Engineer</Link>
-                  </h4>
-                  <p className="text-sm text-muted-foreground">TechGiant • New York, NY</p>
+                <div className="border rounded-md p-3 hover:bg-accent/50 transition-colors cursor-pointer">
+                  <h4 className="font-medium text-sm">React Developer</h4>
+                  <p className="text-xs text-muted-foreground">StartupNow • San Francisco, CA</p>
                 </div>
               </div>
-              
-              <Button variant="ghost" className="w-full" onClick={() => navigate("/app/jobs")}>
-                View More Jobs
-              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
-      
-      {/* Detailed Referral Request Modal */}
-      <DetailedReferralRequestModal
-        open={isReferralModalOpen}
-        onClose={() => setIsReferralModalOpen(false)}
+
+      <RequestReferralModal 
+        open={referralModalOpen} 
+        onOpenChange={setReferralModalOpen}
+        jobId={job.id}
         jobTitle={job.title}
-        company={job.company}
-        referrerId={selectedReferrer?.id}
-        referrerName={selectedReferrer?.name}
+        companyId={job.company_id}
+        companyName={job.company}
       />
     </div>
   );

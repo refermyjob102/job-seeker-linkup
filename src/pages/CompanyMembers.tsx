@@ -1,235 +1,136 @@
 
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useParams, Link } from "react-router-dom";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building, MapPin, Search, ArrowLeft, User, Mail, MessageSquare, Users, Briefcase } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Mock company data
-const companyData = [
-  {
-    id: "1",
-    name: "Google",
-    logo: "/placeholder.svg",
-    description: "Google is a multinational technology company specializing in Internet-related services and products.",
-    industry: "Technology",
-    location: "Mountain View, CA",
-    employees: "100,000+",
-    referrers: 28,
-    jobOpenings: 124,
-    website: "https://google.com",
-    about: "Google LLC is an American multinational technology company focusing on search engine technology, online advertising, cloud computing, computer software, quantum computing, e-commerce, artificial intelligence, and consumer electronics. It has been referred to as \"the most powerful company in the world\" and one of the world's most valuable brands due to its market dominance, data collection, and technological advantages in the area of artificial intelligence."
-  },
-  {
-    id: "2",
-    name: "Meta",
-    logo: "/placeholder.svg",
-    description: "Meta Platforms, Inc., doing business as Meta, is an American multinational technology conglomerate.",
-    industry: "Technology",
-    location: "Menlo Park, CA",
-    employees: "50,000+",
-    referrers: 19,
-    jobOpenings: 87,
-    website: "https://meta.com",
-    about: "Meta Platforms, Inc., doing business as Meta and formerly named Facebook, Inc., and TheFacebook, Inc., is an American multinational technology conglomerate based in Menlo Park, California. The company owns Facebook, Instagram, and WhatsApp, among other products and services."
-  },
-  {
-    id: "3",
-    name: "Apple",
-    logo: "/placeholder.svg",
-    description: "Apple Inc. is an American multinational technology company that designs, develops, and sells consumer electronics, computer software, and online services.",
-    industry: "Technology",
-    location: "Cupertino, CA",
-    employees: "150,000+",
-    referrers: 32,
-    jobOpenings: 156,
-    website: "https://apple.com",
-    about: "Apple Inc. is an American multinational technology company that specializes in consumer electronics, software and online services. Apple is the largest technology company by revenue (totaling US$365.8 billion in 2021) and, as of June 2022, is the world's biggest company by market capitalization, the fourth-largest personal computer vendor by unit sales and second-largest mobile phone manufacturer."
-  },
-  {
-    id: "4",
-    name: "Amazon",
-    logo: "/placeholder.svg",
-    description: "Amazon.com, Inc. is an American multinational technology company focusing on e-commerce, cloud computing, online advertising, digital streaming, and artificial intelligence.",
-    industry: "E-commerce, Technology",
-    location: "Seattle, WA",
-    employees: "1,500,000+",
-    referrers: 47,
-    jobOpenings: 203,
-    website: "https://amazon.com",
-    about: "Amazon.com, Inc. is an American multinational technology company focusing on e-commerce, cloud computing, online advertising, digital streaming, and artificial intelligence. It has been referred to as \"one of the most influential economic and cultural forces in the world\", and is one of the world's most valuable brands."
-  },
-  {
-    id: "5",
-    name: "Microsoft",
-    logo: "/placeholder.svg",
-    description: "Microsoft Corporation is an American multinational technology corporation that produces computer software, consumer electronics, personal computers, and related services.",
-    industry: "Technology",
-    location: "Redmond, WA",
-    employees: "180,000+",
-    referrers: 38,
-    jobOpenings: 179,
-    website: "https://microsoft.com",
-    about: "Microsoft Corporation is an American multinational technology corporation which produces computer software, consumer electronics, personal computers, and related services. Its best-known software products are the Microsoft Windows line of operating systems, the Microsoft Office suite, and the Internet Explorer and Edge web browsers."
-  },
-];
-
-// Mock referrer data
-const referrerData = [
-  {
-    id: "1",
-    userId: "2",
-    companyId: "1",
-    firstName: "Jane",
-    lastName: "Smith",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    jobTitle: "Senior Software Engineer",
-    department: "Engineering",
-    location: "Mountain View, CA",
-    tenure: "4 years",
-    bio: "I help teams build great products at Google. Previously worked at Meta and Amazon. I'm passionate about mentoring and helping others break into tech.",
-    referralCount: 15,
-    successRate: 85,
-    availability: "Open to referrals",
-  },
-  {
-    id: "2",
-    userId: "5",
-    companyId: "1",
-    firstName: "Michael",
-    lastName: "Johnson",
-    avatar: "https://i.pravatar.cc/150?img=5",
-    jobTitle: "Product Manager",
-    department: "Product",
-    location: "San Francisco, CA",
-    tenure: "2 years",
-    bio: "Product Manager working on Google Search. I love connecting talented individuals with opportunities at Google.",
-    referralCount: 8,
-    successRate: 75,
-    availability: "Selective referrals",
-  },
-  {
-    id: "3",
-    userId: "6",
-    companyId: "1",
-    firstName: "Emily",
-    lastName: "Davis",
-    avatar: "https://i.pravatar.cc/150?img=6",
-    jobTitle: "UX Designer",
-    department: "Design",
-    location: "Remote",
-    tenure: "3 years",
-    bio: "Designer focused on creating human-centered experiences. Open to referring passionate designers to Google.",
-    referralCount: 10,
-    successRate: 90,
-    availability: "Open to referrals",
-  },
-  {
-    id: "4",
-    userId: "7",
-    companyId: "2",
-    firstName: "David",
-    lastName: "Wilson",
-    avatar: "https://i.pravatar.cc/150?img=7",
-    jobTitle: "Engineering Manager",
-    department: "Infrastructure",
-    location: "Menlo Park, CA",
-    tenure: "5 years",
-    bio: "Leading infrastructure teams at Meta. Previously at Microsoft. Looking to refer talented engineers who are passionate about scale.",
-    referralCount: 20,
-    successRate: 80,
-    availability: "Open to referrals",
-  },
-  {
-    id: "5",
-    userId: "8",
-    companyId: "2",
-    firstName: "Sophia",
-    lastName: "Lee",
-    avatar: "https://i.pravatar.cc/150?img=8",
-    jobTitle: "Data Scientist",
-    department: "Analytics",
-    location: "Remote",
-    tenure: "2 years",
-    bio: "Working on data analytics at Meta. PhD in Computer Science. Passionate about mentoring aspiring data scientists.",
-    referralCount: 12,
-    successRate: 85,
-    availability: "Selective referrals",
-  },
-  {
-    id: "6",
-    userId: "9",
-    companyId: "3",
-    firstName: "James",
-    lastName: "Brown",
-    avatar: "https://i.pravatar.cc/150?img=9",
-    jobTitle: "iOS Developer",
-    department: "Mobile Apps",
-    location: "Cupertino, CA",
-    tenure: "4 years",
-    bio: "iOS developer at Apple working on the App Store. I enjoy helping talented developers join our team.",
-    referralCount: 14,
-    successRate: 90,
-    availability: "Open to referrals",
-  },
-];
+import { 
+  Building, 
+  User, 
+  Users, 
+  MapPin, 
+  Search, 
+  BriefcaseBusiness,
+  Mail,
+  ExternalLink
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const CompanyMembers = () => {
-  const { id } = useParams<{ id: string }>();
-  const [company, setCompany] = useState<typeof companyData[0] | null>(null);
-  const [referrers, setReferrers] = useState<typeof referrerData>([]);
+  const { id } = useParams();
+  const { toast } = useToast();
+  const [company, setCompany] = useState<any>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredReferrers, setFilteredReferrers] = useState<typeof referrerData>([]);
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [filteredMembers, setFilteredMembers] = useState<any[]>([]);
 
   useEffect(() => {
-    // Find company by ID
-    const foundCompany = companyData.find(c => c.id === id);
-    if (foundCompany) {
-      setCompany(foundCompany);
+    const fetchCompanyAndMembers = async () => {
+      setLoading(true);
+      try {
+        // Fetch company details
+        const { data: companyData, error: companyError } = await supabase
+          .from("companies")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (companyError) throw companyError;
+        setCompany(companyData);
+
+        // Fetch company members with their profiles
+        const { data: membersData, error: membersError } = await supabase
+          .from("company_members")
+          .select(`
+            *,
+            profiles:user_id (
+              id,
+              first_name,
+              last_name,
+              email,
+              role,
+              bio,
+              location,
+              avatar_url
+            )
+          `)
+          .eq("company_id", id);
+
+        if (membersError) throw membersError;
+        setMembers(membersData);
+        setFilteredMembers(membersData);
+      } catch (error) {
+        console.error("Error fetching company data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load company data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchCompanyAndMembers();
     }
-    
-    // Find referrers for this company
-    const companyReferrers = referrerData.filter(r => r.companyId === id);
-    setReferrers(companyReferrers);
-    setFilteredReferrers(companyReferrers);
-  }, [id]);
+  }, [id, toast]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     
-    let results = referrers;
+    if (searchTerm.trim() === "") {
+      setFilteredMembers(members);
+      return;
+    }
     
-    // Apply search term
-    if (searchTerm) {
-      results = results.filter(referrer => 
-        `${referrer.firstName} ${referrer.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        referrer.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        referrer.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        referrer.bio.toLowerCase().includes(searchTerm.toLowerCase())
+    const results = members.filter(member => {
+      const profile = member.profiles;
+      if (!profile) return false;
+      
+      return (
+        profile.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        profile.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        profile.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.job_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.department?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    }
+    });
     
-    // Apply department filter
-    if (departmentFilter !== "all") {
-      results = results.filter(referrer => referrer.department === departmentFilter);
-    }
-    
-    setFilteredReferrers(results);
+    setFilteredMembers(results);
   };
 
-  // Get unique departments for filter
-  const departments = [...new Set(referrers.map(r => r.department))];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading company data...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!company) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p>Loading company details...</p>
+      <div className="text-center py-12">
+        <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Company Not Found</h2>
+        <p className="text-muted-foreground mb-6">
+          The company you're looking for doesn't exist or you don't have permission to view it.
+        </p>
+        <Button asChild>
+          <Link to="/app/companies">Back to Companies</Link>
+        </Button>
       </div>
     );
   }
@@ -237,196 +138,135 @@ const CompanyMembers = () => {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/app/companies" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to Companies
-        </Link>
+        <div className="flex items-center gap-3 mb-4">
+          <Link to="/app/companies" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Companies
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="text-sm font-medium">{company.name}</span>
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">{company.name}</h1>
+        <div className="flex items-center text-muted-foreground mb-4">
+          <MapPin className="h-4 w-4 mr-1" />
+          {company.location || "Location not specified"}
+        </div>
+        <p className="text-muted-foreground max-w-3xl mb-6">
+          {company.description || "No company description available."}
+        </p>
         
-        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
-          <div className="bg-muted flex items-center justify-center p-4 rounded-md h-20 w-20">
-            <Building className="h-10 w-10 text-muted-foreground" />
-          </div>
+        {company.website && (
+          <Button variant="outline" size="sm" className="mb-6" asChild>
+            <a href={company.website} target="_blank" rel="noopener noreferrer">
+              Visit Website
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{company.name}</h1>
-            <div className="flex items-center text-muted-foreground mt-1">
-              <MapPin className="h-4 w-4 mr-1" />
-              {company.location} • 
-              <Briefcase className="h-4 w-4 mx-1" />
-              {company.jobOpenings} open positions
-            </div>
+            <CardTitle className="text-xl">Team Members</CardTitle>
+            <CardDescription>
+              People working at {company.name}
+            </CardDescription>
           </div>
-        </div>
-      </div>
+          <Badge variant="outline" className="ml-2">
+            <Users className="mr-1 h-3.5 w-3.5" />
+            {members.length} {members.length === 1 ? "Member" : "Members"}
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSearch} className="flex w-full max-w-md gap-2 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by name, role, department..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Button type="submit">Search</Button>
+          </form>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Company Info */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>About {company.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{company.about}</p>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="text-sm font-medium mb-2">Industry</h3>
-                <Badge variant="outline">{company.industry}</Badge>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium mb-2">Company Size</h3>
-                <p className="text-sm text-muted-foreground">{company.employees} employees</p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium mb-2">Website</h3>
-                <a 
-                  href={company.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-sm text-primary hover:underline"
-                >
-                  {company.website}
-                </a>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium">Referrers Available</h3>
-                  <p className="text-2xl font-bold">{company.referrers}</p>
-                </div>
-                <Users className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Referrers List */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Referrers</CardTitle>
-              <CardDescription>
-                Connect with employees who can refer you to {company.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Filter and Search */}
-              <form onSubmit={handleSearch} className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search by name, title, or department"
-                      className="pl-8"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Select 
-                    value={departmentFilter} 
-                    onValueChange={setDepartmentFilter}
-                  >
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Departments</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button type="submit">Filter</Button>
-                </div>
-              </form>
-
-              <Separator />
-
-              {/* Referrers Grid */}
-              <div className="space-y-4">
-                {filteredReferrers.length > 0 ? (
-                  filteredReferrers.map((referrer) => (
-                    <Card key={referrer.id} className="card-hover">
-                      <CardContent className="p-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <Avatar className="h-16 w-16">
-                            <AvatarImage src={referrer.avatar} alt={`${referrer.firstName} ${referrer.lastName}`} />
-                            <AvatarFallback>{`${referrer.firstName.charAt(0)}${referrer.lastName.charAt(0)}`}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-                              <h3 className="font-medium text-lg">
-                                {referrer.firstName} {referrer.lastName}
-                              </h3>
-                              <Badge>{referrer.availability}</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              {referrer.jobTitle} • {referrer.department} • {referrer.tenure}
-                            </p>
-                            <p className="text-sm text-muted-foreground mb-3">
-                              <MapPin className="h-3 w-3 inline mr-1" />
-                              {referrer.location}
-                            </p>
-                            <p className="text-sm mb-4 line-clamp-2">{referrer.bio}</p>
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              <Badge variant="outline" className="flex items-center">
-                                <Users className="h-3 w-3 mr-1" />
-                                {referrer.referralCount} Referrals
-                              </Badge>
-                              <Badge variant="outline" className="flex items-center">
-                                {referrer.successRate}% Success Rate
-                              </Badge>
-                            </div>
-                            <div className="flex flex-col xs:flex-row gap-2">
-                              <Button variant="outline" className="flex-1" asChild>
-                                <Link to={`/app/members/${referrer.userId}`}>
-                                  <User className="h-4 w-4 mr-2" />
-                                  View Profile
-                                </Link>
-                              </Button>
-                              <Button variant="outline" className="flex-1" asChild>
-                                <Link to={`/app/chat/${referrer.userId}`}>
-                                  <MessageSquare className="h-4 w-4 mr-2" />
-                                  Message
-                                </Link>
-                              </Button>
-                              <Button className="flex-1">
-                                <Mail className="h-4 w-4 mr-2" />
-                                Request Referral
-                              </Button>
-                            </div>
-                          </div>
+          {filteredMembers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredMembers.map((member) => {
+                const profile = member.profiles;
+                if (!profile) return null;
+                
+                return (
+                  <Card key={member.id} className="card-hover overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="flex items-center space-x-4 p-4">
+                        <div className="bg-primary/10 rounded-full p-2 h-12 w-12 flex items-center justify-center">
+                          <User className="h-6 w-6 text-primary" />
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="text-center py-16">
-                    <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No referrers found</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Try adjusting your search or filter criteria
-                    </p>
-                    <Button onClick={() => {
-                      setSearchTerm("");
-                      setDepartmentFilter("all");
-                      setFilteredReferrers(referrers);
-                    }}>
-                      Reset Filters
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                        <div>
+                          <h3 className="font-semibold">
+                            {profile.first_name} {profile.last_name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {member.job_title || "Role not specified"}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t p-4 space-y-3">
+                        {member.department && (
+                          <div className="flex items-center text-sm">
+                            <BriefcaseBusiness className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>{member.department}</span>
+                          </div>
+                        )}
+                        
+                        {profile.location && (
+                          <div className="flex items-center text-sm">
+                            <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>{profile.location}</span>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center text-sm">
+                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="truncate">{profile.email}</span>
+                        </div>
+                        
+                        <div className="pt-2">
+                          <Button variant="outline" size="sm" className="w-full" asChild>
+                            <Link to={`/app/members/${profile.id}`}>
+                              View Profile
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No members found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm ? "Try adjusting your search terms" : "This company doesn't have any team members yet"}
+              </p>
+              {searchTerm && (
+                <Button onClick={() => {
+                  setSearchTerm("");
+                  setFilteredMembers(members);
+                }}>
+                  Clear Search
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
