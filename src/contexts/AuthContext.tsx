@@ -26,6 +26,8 @@ interface AuthContextType {
   setIsNewUser: (value: boolean) => void;
   fetchProfile: (userId: string) => Promise<void>;
   updateProfileState: (profileData: Partial<Profile>) => void;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (accessToken: string, refreshToken: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,23 +124,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             first_name: userData.first_name,
             last_name: userData.last_name,
             role: userData.role,
-          }
+          },
+          // Add email redirect URLs
+          emailRedirectTo: `${window.location.origin}/login`,
         }
       });
 
       if (authError) throw authError;
 
       if (authData.user) {
-        // The trigger will create the profile automatically
-        await fetchProfile(authData.user.id);
-        
-        // Set as new user to trigger profile completion prompt
-        setIsNewUser(true);
-        
         toast({
           title: "Registration successful!",
-          description: "Your account has been created.",
+          description: "Please check your email to verify your account.",
         });
+        
+        // We don't need to set the user since they need to verify their email first
+        setIsNewUser(true);
       }
     } catch (err) {
       console.error('Registration error:', err);
@@ -163,7 +164,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Special handling for unverified email
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error("Please verify your email before logging in. Check your inbox for the verification link.");
+        }
+        throw error;
+      }
 
       if (data.user) {
         await fetchProfile(data.user.id);
@@ -176,6 +183,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: err instanceof Error ? err.message : 'An error occurred during login',
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+    } catch (err) {
+      console.error('Password reset error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while sending reset email');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const updatePassword = async (accessToken: string, refreshToken: string, newPassword: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // First, set the session using the tokens
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      
+      if (sessionError) throw sessionError;
+      
+      // Then update the password
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (error) throw error;
+      
+    } catch (err) {
+      console.error('Password update error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred while updating password');
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -210,7 +266,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isNewUser, 
       setIsNewUser,
       fetchProfile,
-      updateProfileState
+      updateProfileState,
+      resetPassword,
+      updatePassword
     }}>
       {children}
     </AuthContext.Provider>

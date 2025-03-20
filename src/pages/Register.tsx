@@ -19,12 +19,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Register = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { register, isLoading, error, clearError } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const initialRole = new URLSearchParams(location.search).get("role") || "seeker";
   
@@ -63,11 +65,11 @@ const Register = () => {
       
       toast({
         title: "Registration successful!",
-        description: "Your account has been created.",
+        description: "Your account has been created. Please check your email for verification.",
         variant: "default",
       });
       
-      navigate("/app");
+      navigate("/login");
     } catch (err) {
       // Error is handled in auth context
     }
@@ -160,6 +162,7 @@ const Register = () => {
                       setPassword(e.target.value);
                       clearError();
                     }}
+                    showPasswordToggle={true}
                   />
                 </div>
                 
