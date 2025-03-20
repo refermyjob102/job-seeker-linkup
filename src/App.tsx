@@ -13,6 +13,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import BrowseJobs from '@/pages/BrowseJobs';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import Dashboard from '@/pages/Dashboard';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -41,7 +42,7 @@ const AppContent = () => {
         {/* Protected Routes */}
         <Route path="/app" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="/app/dashboard" element={<div>Dashboard Content</div>} />
+          <Route path="/app/dashboard" element={<Dashboard />} />
           <Route path="/app/profile" element={<div>Profile Content</div>} />
           <Route path="/app/jobs" element={<div>Jobs Content</div>} />
           <Route path="/app/referrals" element={<div>Referrals Content</div>} />
