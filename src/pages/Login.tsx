@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -17,7 +16,6 @@ const Login = () => {
   const { login, error, clearError, isProfileComplete } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
   
   // Get the return URL if available
   const from = location.state?.from || "/app";
@@ -101,7 +99,6 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  showPasswordToggle={true}
                 />
               </div>
               

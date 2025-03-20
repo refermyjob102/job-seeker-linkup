@@ -1,71 +1,96 @@
 
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { ThemeProvider } from "@/components/ui/theme-provider";
-import { useTheme } from "@/components/ui/use-theme";
-import { AuthProvider } from '@/contexts/AuthContext';
-import DashboardLayout from '@/layouts/DashboardLayout';
-import Landing from '@/pages/Landing';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import NotFound from '@/pages/NotFound';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import BrowseJobs from '@/pages/BrowseJobs';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
-import Dashboard from '@/pages/Dashboard';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 
-const AppContent = () => {
-  const { theme } = useTheme();
-  const [isMounted, setIsMounted] = useState(false);
+// Pages
+import Landing from "./pages/Landing";
+import Dashboard from "./pages/Dashboard";
+import JobListings from "./pages/JobListings";
+import JobDetails from "./pages/JobDetails";
+import Profile from "./pages/Profile";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import Companies from "./pages/Companies";
+import CompanyMembers from "./pages/CompanyMembers";
+import MemberProfile from "./pages/MemberProfile";
+import Chat from "./pages/Chat";
+import Referrals from "./pages/Referrals";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import HowItWorks from "./pages/HowItWorks";
+import BrowseJobs from "./pages/BrowseJobs";
+import WhyRefer from "./pages/WhyRefer";
+import Rewards from "./pages/Rewards";
+import Partners from "./pages/Partners";
+import SuccessStories from "./pages/SuccessStories";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import Notifications from "./pages/Notifications";
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+// Layouts
+import DashboardLayout from "./layouts/DashboardLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-  // Prevent hydration error
-  if (!isMounted) {
-    return <div className="h-screen w-screen flex items-center justify-center">Loading theme...</div>;
-  }
+const queryClient = new QueryClient();
 
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-      
-        {/* Authentication Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-      
-        {/* Protected Routes */}
-        <Route path="/app" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-          <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
-          <Route path="/app/dashboard" element={<Dashboard />} />
-          <Route path="/app/profile" element={<div>Profile Content</div>} />
-          <Route path="/app/jobs" element={<div>Jobs Content</div>} />
-          <Route path="/app/referrals" element={<div>Referrals Content</div>} />
-          {/* Add more protected routes here */}
-        </Route>
-      
-        {/* Public Routes */}
-        <Route path="/browse-jobs" element={<BrowseJobs />} />
-      
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
-  );
-};
-
-const App = () => {
-  return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
-  );
-};
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/browse-jobs" element={<BrowseJobs />} />
+            <Route path="/success-stories" element={<SuccessStories />} />
+            <Route path="/why-refer" element={<WhyRefer />} />
+            <Route path="/rewards" element={<Rewards />} />
+            <Route path="/partners" element={<Partners />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/cookies" element={<Cookies />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogPost />} />
+            
+            {/* Protected routes with DashboardLayout */}
+            <Route path="/app" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Dashboard />} />
+              <Route path="jobs" element={<JobListings />} />
+              <Route path="jobs/:id" element={<JobDetails />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="companies" element={<Companies />} />
+              <Route path="companies/:id" element={<CompanyMembers />} />
+              <Route path="members/:id" element={<MemberProfile />} />
+              <Route path="chat" element={<Chat />} />
+              <Route path="chat/:id" element={<Chat />} />
+              <Route path="referrals" element={<Referrals />} />
+              <Route path="notifications" element={<Notifications />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;
