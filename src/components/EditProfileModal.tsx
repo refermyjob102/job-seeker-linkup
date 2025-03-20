@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { topCompanies } from "@/data/topCompanies";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -25,6 +27,7 @@ const EditProfileModal = ({
   onSave 
 }: EditProfileModalProps) => {
   const { toast } = useToast();
+  const { user, fetchProfile } = useAuth();
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -84,7 +87,22 @@ const EditProfileModal = ({
     setIsSubmitting(true);
     
     try {
+      // First call the onSave prop for backward compatibility
       await onSave(formData);
+      
+      // Then update the profile directly in Supabase if we have a user ID
+      if (user?.id) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(formData)
+          .eq('id', user.id);
+          
+        if (error) throw error;
+        
+        // Fetch the updated profile to ensure UI is in sync
+        await fetchProfile(user.id);
+      }
+      
       onOpenChange(false);
       
       toast({
@@ -122,10 +140,10 @@ const EditProfileModal = ({
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid grid-cols-4 mb-4">
+            <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-4">
               <TabsTrigger value="personal">Personal</TabsTrigger>
               <TabsTrigger value="professional">Professional</TabsTrigger>
-              <TabsTrigger value="skills">Skills & Education</TabsTrigger>
+              <TabsTrigger value="skills">Skills</TabsTrigger>
               <TabsTrigger value="social">Social</TabsTrigger>
             </TabsList>
 
@@ -133,44 +151,48 @@ const EditProfileModal = ({
             <TabsContent value="personal" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">First Name*</Label>
                   <Input
                     type="text"
                     id="firstName"
                     value={formData.first_name}
                     onChange={(e) => handleInputChange("first_name", e.target.value)}
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">Last Name*</Label>
                   <Input
                     type="text"
                     id="lastName"
                     value={formData.last_name}
                     onChange={(e) => handleInputChange("last_name", e.target.value)}
+                    required
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="bio">Bio</Label>
+                <Label htmlFor="bio">Bio*</Label>
                 <Textarea
                   id="bio"
                   value={formData.bio}
                   onChange={(e) => handleInputChange("bio", e.target.value)}
                   placeholder="Tell us a bit about yourself"
                   rows={4}
+                  required
                 />
               </div>
 
               <div>
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location">Location*</Label>
                 <Input
                   type="text"
                   id="location"
                   value={formData.location}
                   onChange={(e) => handleInputChange("location", e.target.value)}
                   placeholder="Your city, state, or country"
+                  required
                 />
               </div>
 

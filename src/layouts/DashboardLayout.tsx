@@ -26,12 +26,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logout, isProfileComplete } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    if (isMobile && isSidebarOpen) {
+      const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar && !sidebar.contains(target) && !target.closest('.sidebar-toggle')) {
+          setIsSidebarOpen(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isMobile, isSidebarOpen]);
+
+  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -52,20 +79,6 @@ const DashboardLayout = () => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
-  // Effect to prompt users to complete their profile if they haven't yet
-  useEffect(() => {
-    if (user && !isProfileComplete() && location.pathname !== "/app/profile") {
-      const hasProfilePromptBeenShown = sessionStorage.getItem('profilePromptShown');
-      
-      if (!hasProfilePromptBeenShown) {
-        // Set flag so we don't show it again in this session
-        sessionStorage.setItem('profilePromptShown', 'true');
-        // Navigate to profile page
-        navigate("/app/profile");
-      }
-    }
-  }, [user, isProfileComplete, location.pathname, navigate]);
-
   const menuItems = [
     { path: "/app", icon: Home, label: "Dashboard" },
     { path: "/app/jobs", icon: Briefcase, label: "Job Listings" },
@@ -77,11 +90,19 @@ const DashboardLayout = () => {
 
   return (
     <div className="min-h-screen flex relative bg-background">
+      {/* Mobile Sidebar Backdrop */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-30" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      
       {/* Mobile Sidebar Toggle */}
       <Button 
         variant="ghost" 
         size="icon" 
-        className="fixed top-4 left-4 z-50 lg:hidden" 
+        className="fixed top-4 left-4 z-50 lg:hidden sidebar-toggle" 
         onClick={toggleSidebar}
       >
         {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -89,6 +110,7 @@ const DashboardLayout = () => {
 
       {/* Sidebar */}
       <aside 
+        id="sidebar"
         className={`w-64 bg-sidebar border-r border-sidebar-border h-screen fixed lg:relative transition-all duration-300 ease-in-out z-40 ${
           isSidebarOpen ? "left-0" : "-left-64 lg:left-0"
         }`}
@@ -99,7 +121,7 @@ const DashboardLayout = () => {
             <h1 className="text-xl font-bold">JobReferral</h1>
           </div>
           
-          <nav className="space-y-1 flex-1">
+          <nav className="space-y-1 flex-1 overflow-y-auto">
             {menuItems.map((item) => (
               <Link 
                 key={item.path}
@@ -150,7 +172,7 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-4 lg:p-8 min-h-screen overflow-auto">
+      <main className="flex-1 p-4 lg:p-8 min-h-screen overflow-auto pb-20">
         <div className="max-w-7xl mx-auto">
           {/* Top navbar for mobile */}
           <div className="lg:hidden flex justify-end items-center mb-6 pt-2">

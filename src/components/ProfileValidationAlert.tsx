@@ -18,6 +18,8 @@ const ProfileValidationAlert = ({ profile }: ProfileValidationAlertProps) => {
   if (!profile.location || profile.location.trim() === '') missingFields.push('Location');
   if (!profile.bio || profile.bio.trim() === '') missingFields.push('Bio');
   
+  const completionPercentage = Math.floor(((5 - missingFields.length) / 5) * 100);
+  
   if (missingFields.length === 0) {
     return (
       <Alert className="bg-green-50 border-green-200 mb-6">
@@ -33,8 +35,8 @@ const ProfileValidationAlert = ({ profile }: ProfileValidationAlertProps) => {
   return (
     <Alert variant="destructive" className="mb-6">
       <AlertCircle className="h-4 w-4" />
-      <AlertTitle>Profile Incomplete</AlertTitle>
-      <AlertDescription>
+      <AlertTitle>Profile Incomplete ({completionPercentage}%)</AlertTitle>
+      <AlertDescription className="text-sm sm:text-base">
         Please complete the following fields to improve your matches and enable referral requests: <br />
         <span className="font-semibold">{missingFields.join(', ')}</span>
       </AlertDescription>

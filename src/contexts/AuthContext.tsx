@@ -24,6 +24,7 @@ interface AuthContextType {
   isProfileComplete: () => boolean;
   isNewUser: boolean;
   setIsNewUser: (value: boolean) => void;
+  fetchProfile: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -199,7 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearError, 
       isProfileComplete, 
       isNewUser, 
-      setIsNewUser 
+      setIsNewUser,
+      fetchProfile 
     }}>
       {children}
     </AuthContext.Provider>
