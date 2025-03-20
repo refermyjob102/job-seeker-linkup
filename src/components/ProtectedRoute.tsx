@@ -1,9 +1,10 @@
 
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import ProfileValidationAlert from "@/components/ProfileValidationAlert";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [showProfileAlert, setShowProfileAlert] = useState(false);
 
   useEffect(() => {
     // Only redirect if the user is logged in and is a new user
@@ -28,15 +30,19 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       setIsNewUser(false); // Reset the flag after redirection
     }
     
-    // Also check if profile is incomplete and they're trying to access certain pages
+    // Check if profile is incomplete and they're trying to access certain pages
     if (user && !isProfileComplete() && 
         !location.pathname.includes('/app/profile') && 
         (location.pathname.includes('/app/jobs') || location.pathname.includes('/app/referrals'))) {
+      
       toast({
         title: "Profile Incomplete",
         description: "Please complete your profile to access this feature.",
       });
       navigate("/app/profile");
+      setShowProfileAlert(true);
+    } else {
+      setShowProfileAlert(false);
     }
   }, [user, isNewUser, isProfileComplete, location.pathname, navigate, setIsNewUser, toast]);
 
@@ -56,7 +62,16 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {showProfileAlert && (
+        <div className={`${isMobile ? 'p-4' : 'p-6'} bg-background`}>
+          <ProfileValidationAlert profile={user} />
+        </div>
+      )}
+      {children}
+    </>
+  );
 };
 
 export default ProtectedRoute;

@@ -12,12 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Profile } from "@/types/database";
 
 interface EditProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  profile: any;
-  onSave: (data: any) => Promise<void>;
+  profile: Profile | null;
+  onSave: (data: Partial<Profile>) => Promise<void>;
 }
 
 const EditProfileModal = ({ 
@@ -28,7 +30,8 @@ const EditProfileModal = ({
 }: EditProfileModalProps) => {
   const { toast } = useToast();
   const { user, fetchProfile } = useAuth();
-  const [formData, setFormData] = useState({
+  const isMobile = useIsMobile();
+  const [formData, setFormData] = useState<Partial<Profile>>({
     first_name: "",
     last_name: "",
     bio: "",
@@ -49,6 +52,7 @@ const EditProfileModal = ({
     open_to_work: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState("personal");
 
   useEffect(() => {
     if (profile) {
@@ -130,7 +134,7 @@ const EditProfileModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`sm:max-w-[700px] max-h-[90vh] overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
@@ -139,13 +143,25 @@ const EditProfileModal = ({
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid grid-cols-2 sm:grid-cols-4 mb-4">
+          <Tabs 
+            defaultValue="personal" 
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} mb-4`}>
               <TabsTrigger value="personal">Personal</TabsTrigger>
               <TabsTrigger value="professional">Professional</TabsTrigger>
-              <TabsTrigger value="skills">Skills</TabsTrigger>
-              <TabsTrigger value="social">Social</TabsTrigger>
+              {!isMobile && <TabsTrigger value="skills">Skills</TabsTrigger>}
+              {!isMobile && <TabsTrigger value="social">Social</TabsTrigger>}
             </TabsList>
+
+            {isMobile && (
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="skills">Skills</TabsTrigger>
+                <TabsTrigger value="social">Social</TabsTrigger>
+              </TabsList>
+            )}
 
             {/* Personal Tab */}
             <TabsContent value="personal" className="space-y-4">
@@ -226,7 +242,7 @@ const EditProfileModal = ({
                 <Label htmlFor="company">Company</Label>
                 <Select 
                   onValueChange={(value) => handleInputChange("company", value)} 
-                  value={formData.company}
+                  value={formData.company?.toString() || ""}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a company" />
@@ -370,11 +386,20 @@ const EditProfileModal = ({
             </TabsContent>
           </Tabs>
 
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+          <DialogFooter className={isMobile ? "flex flex-col space-y-2" : ""}>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => onOpenChange(false)}
+              className={isMobile ? "w-full" : ""}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className={isMobile ? "w-full" : ""}
+            >
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

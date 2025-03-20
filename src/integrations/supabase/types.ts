@@ -165,43 +165,85 @@ export type Database = {
       }
       profiles: {
         Row: {
+          available_for_referrals: boolean | null
           avatar_url: string | null
           bio: string | null
+          company: string | null
           created_at: string
+          department: string | null
+          education: string | null
           email: string
           first_name: string
+          github_url: string | null
           id: string
+          interests: string | null
+          job_title: string | null
+          languages: string | null
           last_name: string
+          linkedin_url: string | null
           location: string | null
+          open_to_work: boolean | null
           resume_url: string | null
           role: string
+          skills: string | null
+          twitter_url: string | null
           updated_at: string
+          website_url: string | null
+          years_experience: string | null
         }
         Insert: {
+          available_for_referrals?: boolean | null
           avatar_url?: string | null
           bio?: string | null
+          company?: string | null
           created_at?: string
+          department?: string | null
+          education?: string | null
           email: string
           first_name: string
+          github_url?: string | null
           id: string
+          interests?: string | null
+          job_title?: string | null
+          languages?: string | null
           last_name: string
+          linkedin_url?: string | null
           location?: string | null
+          open_to_work?: boolean | null
           resume_url?: string | null
           role: string
+          skills?: string | null
+          twitter_url?: string | null
           updated_at?: string
+          website_url?: string | null
+          years_experience?: string | null
         }
         Update: {
+          available_for_referrals?: boolean | null
           avatar_url?: string | null
           bio?: string | null
+          company?: string | null
           created_at?: string
+          department?: string | null
+          education?: string | null
           email?: string
           first_name?: string
+          github_url?: string | null
           id?: string
+          interests?: string | null
+          job_title?: string | null
+          languages?: string | null
           last_name?: string
+          linkedin_url?: string | null
           location?: string | null
+          open_to_work?: boolean | null
           resume_url?: string | null
           role?: string
+          skills?: string | null
+          twitter_url?: string | null
           updated_at?: string
+          website_url?: string | null
+          years_experience?: string | null
         }
         Relationships: []
       }

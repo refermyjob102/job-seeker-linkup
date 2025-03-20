@@ -25,6 +25,7 @@ interface AuthContextType {
   isNewUser: boolean;
   setIsNewUser: (value: boolean) => void;
   fetchProfile: (userId: string) => Promise<void>;
+  updateProfileState: (profileData: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,6 +80,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error fetching profile:', error);
       setUser(null);
+    }
+  };
+
+  // Add a function to update the profile state without fetching from the database
+  const updateProfileState = (profileData: Partial<Profile>) => {
+    if (user) {
+      setUser({ ...user, ...profileData });
     }
   };
 
@@ -201,7 +209,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isProfileComplete, 
       isNewUser, 
       setIsNewUser,
-      fetchProfile 
+      fetchProfile,
+      updateProfileState
     }}>
       {children}
     </AuthContext.Provider>

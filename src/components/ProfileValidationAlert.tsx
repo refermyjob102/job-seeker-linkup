@@ -1,13 +1,17 @@
 
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ThumbsUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { Profile } from "@/types/database";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProfileValidationAlertProps {
   profile: Profile | null;
 }
 
 const ProfileValidationAlert = ({ profile }: ProfileValidationAlertProps) => {
+  const isMobile = useIsMobile();
+  
   if (!profile) return null;
 
   const missingFields = [];
@@ -24,9 +28,12 @@ const ProfileValidationAlert = ({ profile }: ProfileValidationAlertProps) => {
     return (
       <Alert className="bg-green-50 border-green-200 mb-6">
         <CheckCircle2 className="h-4 w-4 text-green-600" />
-        <AlertTitle className="text-green-800">Profile Complete</AlertTitle>
+        <AlertTitle className="text-green-800">Profile Complete!</AlertTitle>
         <AlertDescription className="text-green-700">
-          Your profile is complete! You're all set to request referrals and apply for jobs.
+          <div className="flex flex-col space-y-2">
+            <p>Your profile is 100% complete! You're all set to request referrals and apply for jobs.</p>
+            <Progress value={100} className="h-2 bg-green-100" />
+          </div>
         </AlertDescription>
       </Alert>
     );
@@ -36,9 +43,16 @@ const ProfileValidationAlert = ({ profile }: ProfileValidationAlertProps) => {
     <Alert variant="destructive" className="mb-6">
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Profile Incomplete ({completionPercentage}%)</AlertTitle>
-      <AlertDescription className="text-sm sm:text-base">
-        Please complete the following fields to improve your matches and enable referral requests: <br />
-        <span className="font-semibold">{missingFields.join(', ')}</span>
+      <AlertDescription>
+        <div className="flex flex-col space-y-2">
+          <p className={isMobile ? "text-sm" : "text-base"}>
+            Please complete the following fields to improve your matches and enable referral requests:
+          </p>
+          <div className={`font-semibold ${isMobile ? "text-sm" : "text-base"}`}>
+            {missingFields.join(', ')}
+          </div>
+          <Progress value={completionPercentage} className="h-2" />
+        </div>
       </AlertDescription>
     </Alert>
   );
