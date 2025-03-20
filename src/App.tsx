@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { useTheme } from "@/components/ui/use-theme";
-import { useAuth } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import Landing from '@/pages/Landing';
 import Login from '@/pages/Login';
@@ -16,7 +16,6 @@ import ResetPassword from '@/pages/ResetPassword';
 
 const AppContent = () => {
   const { theme } = useTheme();
-  const { user, isLoading } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -61,7 +60,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 };
