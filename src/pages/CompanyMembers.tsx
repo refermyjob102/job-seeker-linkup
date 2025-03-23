@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,13 +12,21 @@ import {
   ExternalLink, 
   Search,
   BadgeCheck,
-  UserCheck
+  UserCheck,
+  Globe,
+  Calendar,
+  TrendingUp,
+  Award,
+  Mail,
+  Phone
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { topCompanies, getCompanyById } from "@/data/topCompanies";
+import ViewOpenPositionsModal from "@/components/ViewOpenPositionsModal";
+import { Separator } from "@/components/ui/separator";
 
 // Mock employees data
 const employeesData = [
@@ -106,12 +114,16 @@ const employeesData = [
 
 const CompanyMembers = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const positionFilter = searchParams.get('position');
+  
   const [company, setCompany] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [employees, setEmployees] = useState<any[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [isOpenPositionsModalOpen, setIsOpenPositionsModalOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -134,7 +146,7 @@ const CompanyMembers = () => {
 
   useEffect(() => {
     filterEmployees();
-  }, [filter, searchTerm, employees]);
+  }, [filter, searchTerm, employees, positionFilter]);
 
   const filterEmployees = () => {
     let filtered = employees;
@@ -150,6 +162,13 @@ const CompanyMembers = () => {
     
     // Apply available for referrals filter
     if (filter === "available") {
+      filtered = filtered.filter(emp => emp.availableForReferrals);
+    }
+    
+    // Apply position filter from URL
+    if (positionFilter) {
+      // In a real app, this would filter employees who can refer for this position
+      // For now, just show available referrers
       filtered = filtered.filter(emp => emp.availableForReferrals);
     }
     
@@ -181,6 +200,21 @@ const CompanyMembers = () => {
 
   const referrersCount = filteredEmployees.filter(emp => emp.availableForReferrals).length;
 
+  // Enhanced company details for LinkedIn-like experience
+  const companyDetails = {
+    founded: "2015",
+    industry: company.sector,
+    size: `${parseInt(company.id) * 100}+ employees`,
+    headquarters: "San Francisco, CA",
+    website: "https://www.example.com",
+    specialties: ["Software Development", "Cloud Computing", "Data Analytics", "AI/ML"],
+    description: `${company.name} is a leading company in the ${company.sector} industry, focused on delivering innovative solutions that transform businesses. With a team of dedicated professionals, we're committed to excellence and creating value for our clients and stakeholders. Our mission is to leverage technology to solve complex problems and drive meaningful change.`,
+    foundersInfo: "Founded by tech industry veterans with a passion for innovation and problem-solving.",
+    culture: "We foster a collaborative environment where creativity, diversity, and continuous learning are valued. Our team members are encouraged to take initiative and contribute to our shared success.",
+    contactEmail: "info@example.com",
+    contactPhone: "+1 (555) 123-4567"
+  };
+
   return (
     <div className="space-y-6">
       <Link to="/app/companies" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
@@ -201,6 +235,9 @@ const CompanyMembers = () => {
                 <h1 className="text-2xl font-bold mb-2">{company.name}</h1>
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
                   <Badge variant="outline">{company.sector}</Badge>
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                    {companyDetails.size}
+                  </Badge>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -228,7 +265,7 @@ const CompanyMembers = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                  <Button>
+                  <Button onClick={() => setIsOpenPositionsModalOpen(true)}>
                     View Open Positions
                   </Button>
                   <Button variant="outline" asChild>
@@ -237,6 +274,100 @@ const CompanyMembers = () => {
                       Visit Website
                     </a>
                   </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Enhanced Company Details - LinkedIn-like */}
+        <Card>
+          <CardHeader>
+            <CardTitle>About {company.name}</CardTitle>
+            <CardDescription>Company profile and details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">{companyDetails.description}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Founded</h4>
+                      <p className="text-sm text-muted-foreground">{companyDetails.founded}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Headquarters</h4>
+                      <p className="text-sm text-muted-foreground">{companyDetails.headquarters}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Globe className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Website</h4>
+                      <p className="text-sm text-muted-foreground">
+                        <a href={companyDetails.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {companyDetails.website}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2">
+                    <TrendingUp className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Industry</h4>
+                      <p className="text-sm text-muted-foreground">{companyDetails.industry}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Company size</h4>
+                      <p className="text-sm text-muted-foreground">{companyDetails.size}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Award className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <h4 className="font-medium">Specialties</h4>
+                      <p className="text-sm text-muted-foreground">{companyDetails.specialties.join(", ")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="font-medium">Company Culture</h3>
+              <p className="text-sm text-muted-foreground">{companyDetails.culture}</p>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="font-medium">Contact Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{companyDetails.contactEmail}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{companyDetails.contactPhone}</span>
                 </div>
               </div>
             </div>
@@ -327,6 +458,14 @@ const CompanyMembers = () => {
           )}
         </div>
       </div>
+
+      {/* Open Positions Modal */}
+      <ViewOpenPositionsModal
+        open={isOpenPositionsModalOpen}
+        onClose={() => setIsOpenPositionsModalOpen(false)}
+        companyId={id || ""}
+        companyName={company.name}
+      />
     </div>
   );
 };
