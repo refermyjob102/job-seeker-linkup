@@ -15,11 +15,13 @@ import {
 } from "@/features/referrals/data/mockReferrals";
 import SeekerTabs from "@/features/referrals/components/SeekerTabs";
 import ReferrerTabs from "@/features/referrals/components/ReferrerTabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Referrals = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<string>(user?.role === "referrer" ? "outgoing" : "all");
   const [referrals, setReferrals] = useState<SeekerReferral[]>(initialReferrals);
   const [outgoingReferrals, setOutgoingReferrals] = useState<ReferrerReferral[]>(initialOutgoingReferrals);
@@ -69,32 +71,35 @@ const Referrals = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Referrals</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Referrals</h1>
         {user?.role === "seeker" && (
-          <Button onClick={() => navigate("/app/companies")}>
+          <Button onClick={() => navigate("/app/companies")} className="w-full sm:w-auto">
             Find Referrers
           </Button>
         )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          {user?.role === "seeker" ? (
-            <>
-              <TabsTrigger value="all">All Referrals</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="accepted">Accepted</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected</TabsTrigger>
-            </>
-          ) : (
-            <>
-              <TabsTrigger value="outgoing">Outgoing Referrals</TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="accepted">Accepted</TabsTrigger>
-            </>
-          )}
-        </TabsList>
+        {/* Responsive TabsList */}
+        <div className="overflow-x-auto -mx-4 px-4 pb-2">
+          <TabsList className="mb-6 flex w-auto min-w-full justify-start sm:justify-center">
+            {user?.role === "seeker" ? (
+              <>
+                <TabsTrigger value="all" className="flex-shrink-0">All Referrals</TabsTrigger>
+                <TabsTrigger value="pending" className="flex-shrink-0">Pending</TabsTrigger>
+                <TabsTrigger value="accepted" className="flex-shrink-0">Accepted</TabsTrigger>
+                <TabsTrigger value="rejected" className="flex-shrink-0">Rejected</TabsTrigger>
+              </>
+            ) : (
+              <>
+                <TabsTrigger value="outgoing" className="flex-shrink-0">Outgoing Referrals</TabsTrigger>
+                <TabsTrigger value="pending" className="flex-shrink-0">Pending</TabsTrigger>
+                <TabsTrigger value="accepted" className="flex-shrink-0">Accepted</TabsTrigger>
+              </>
+            )}
+          </TabsList>
+        </div>
 
         {user?.role === "seeker" ? (
           <SeekerTabs 

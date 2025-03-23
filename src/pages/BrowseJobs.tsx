@@ -1,14 +1,17 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building, Search, BriefcaseIcon, FilterIcon, MapPinIcon, ChevronRight } from "lucide-react";
+import { Building, Search, FilterIcon, MapPinIcon, ChevronRight } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const BrowseJobs = () => {
+  const isMobile = useIsMobile();
+  
   // Mock job data
   const jobs = [
     {
@@ -119,8 +122,8 @@ const BrowseJobs = () => {
             </p>
           </div>
 
-          {/* Search and Filter Section */}
-          <div className="bg-muted/30 p-6 rounded-lg mb-8">
+          {/* Search and Filter Section - Fixed responsive issues */}
+          <div className="bg-muted/30 p-4 md:p-6 rounded-lg mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="relative">
                 <Input 
@@ -149,28 +152,30 @@ const BrowseJobs = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
+            
+            {/* Responsive filter buttons */}
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" className="flex items-center">
                   <FilterIcon className="h-4 w-4 mr-2" />
-                  More Filters
+                  Filters
                 </Button>
                 <Button variant="outline" size="sm">
-                  Remote Only
+                  Remote
                 </Button>
                 <Button variant="outline" size="sm">
-                  Posted Today
+                  Today
                 </Button>
               </div>
-              <Button>Search Jobs</Button>
+              <Button className="w-full md:w-auto">Search Jobs</Button>
             </div>
           </div>
 
-          {/* Results Count */}
-          <div className="flex justify-between items-center mb-6">
+          {/* Results Count - Responsive layout */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
             <p className="text-muted-foreground">Showing {jobs.length} jobs</p>
             <Select defaultValue="recent">
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -182,15 +187,15 @@ const BrowseJobs = () => {
             </Select>
           </div>
 
-          {/* Job Listings */}
+          {/* Job Listings - Improved mobile responsiveness */}
           <div className="grid grid-cols-1 gap-4 mb-12">
             {jobs.map((job) => (
               <Card key={job.id} className="hover:border-primary transition-colors">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between">
                     <div className="mb-4 md:mb-0">
-                      <div className="flex items-center mb-2">
-                        <h3 className="text-xl font-semibold mr-3">{job.title}</h3>
+                      <div className="flex items-start md:items-center flex-col md:flex-row gap-2 md:gap-0 mb-2">
+                        <h3 className="text-xl font-semibold mr-0 md:mr-3">{job.title}</h3>
                         <Badge variant={job.type === "Full-time" ? "default" : "outline"}>
                           {job.type}
                         </Badge>
@@ -207,7 +212,7 @@ const BrowseJobs = () => {
                         ))}
                       </div>
                     </div>
-                    <div className="flex flex-col justify-center md:items-end">
+                    <div className="flex flex-col justify-center md:items-end mt-4 md:mt-0">
                       <Link to="/login" state={{ from: `/app/jobs/${job.id}` }}>
                         <Button className="w-full md:w-auto mb-2">View Details</Button>
                       </Link>
@@ -221,29 +226,29 @@ const BrowseJobs = () => {
             ))}
           </div>
 
-          {/* Pagination */}
+          {/* Pagination - Improved for mobile */}
           <div className="flex justify-center">
-            <div className="flex space-x-1">
+            <div className="flex flex-wrap justify-center gap-1">
               <Button variant="outline" size="sm" disabled>Previous</Button>
               <Button variant="default" size="sm">1</Button>
               <Button variant="outline" size="sm">2</Button>
               <Button variant="outline" size="sm">3</Button>
-              <Button variant="outline" size="sm">4</Button>
-              <Button variant="outline" size="sm">5</Button>
+              <Button variant="outline" size="sm" className="hidden sm:inline-flex">4</Button>
+              <Button variant="outline" size="sm" className="hidden sm:inline-flex">5</Button>
               <Button variant="outline" size="sm">Next</Button>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Footer - Improved for mobile */}
       <footer className="bg-background py-8 px-4 border-t mt-12">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground mb-4 md:mb-0">
               © 2023 JobReferral. All rights reserved.
             </p>
-            <div className="flex flex-wrap justify-center gap-6">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6">
               <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
               <Link to="/how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How It Works</Link>
               <Link to="/why-refer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Why Refer</Link>

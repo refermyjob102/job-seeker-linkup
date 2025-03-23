@@ -8,14 +8,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
   const { login, error, clearError, isProfileComplete } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   
   // Get the return URL if available
   const from = location.state?.from || "/app";
@@ -38,6 +54,43 @@ const Login = () => {
       console.error("Login error:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail || !resetEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResetSubmitting(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for a password reset link.",
+      });
+      
+      setIsResetDialogOpen(false);
+    } catch (error) {
+      console.error("Reset password error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send reset password email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetSubmitting(false);
     }
   };
 
@@ -88,9 +141,14 @@ const Login = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="px-0 text-sm"
+                    onClick={() => setIsResetDialogOpen(true)}
+                  >
                     Forgot password?
-                  </Link>
+                  </Button>
                 </div>
                 <Input
                   id="password"
@@ -98,6 +156,7 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  showPasswordToggle
                   required
                 />
               </div>
@@ -116,6 +175,39 @@ const Login = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Password Reset Dialog */}
+      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleResetPassword}
+              disabled={isResetSubmitting}
+            >
+              {isResetSubmitting ? "Sending..." : "Send Reset Link"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Footer */}
       <footer className="py-6 px-4 border-t">
