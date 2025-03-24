@@ -42,6 +42,7 @@ const tempJobData = {
   salary_max: 150000,
   posted_date: "2023-05-15",
   expires_at: "2023-06-15",
+  apply_url: "https://example.com/apply",
   description: "TechCorp is looking for a Senior Frontend Developer to join our growing team. You will be responsible for building user interfaces for our web applications, ensuring they are responsive, accessible, and performant.",
   responsibilities: [
     "Build responsive user interfaces using React and TypeScript",
@@ -142,6 +143,24 @@ const JobDetails = () => {
     }
 
     setReferralModalOpen(true);
+  };
+
+  const handleApplyDirectly = () => {
+    if (!job?.apply_url) {
+      toast({
+        title: "Application link unavailable",
+        description: "The direct application link for this job is not available.",
+      });
+      return;
+    }
+    
+    // Open the application URL in a new tab
+    window.open(job.apply_url, "_blank", "noopener,noreferrer");
+    
+    toast({
+      title: "Application started",
+      description: "You've been redirected to the company's application page.",
+    });
   };
 
   const toggleSaveJob = () => {
@@ -335,7 +354,7 @@ const JobDetails = () => {
                 <Button className="w-full" onClick={handleRequestReferral}>
                   Request Referral
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={handleApplyDirectly}>
                   Apply Directly
                 </Button>
               </div>
