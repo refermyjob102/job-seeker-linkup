@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Notification {
@@ -22,9 +21,39 @@ export type NotificationFilter = 'all' | 'referral' | 'message' | 'system' | 'un
 
 class NotificationService {
   /**
+   * Create a notification
+   */
+  async createNotification(
+    recipientId: string, 
+    senderId: string, 
+    type: Notification['type'], 
+    content: string,
+    additionalData?: { referral_id?: string; conversation_id?: string }
+  ): Promise<Notification> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        recipient_id: recipientId,
+        sender_id: senderId,
+        type,
+        content,
+        ...additionalData
+      })
+      .select()
+      .single();
+      
+    if (error) throw error;
+    
+    return data;
+  }
+
+  /**
    * Subscribe to new notifications
    */
-  subscribeToNotifications(userId: string, onNotificationReceived: (notification: Notification) => void) {
+  subscribeToNotifications(
+    userId: string, 
+    onNotificationReceived: (notification: Notification) => void
+  ) {
     const channel = supabase
       .channel('user_notifications')
       .on(
@@ -36,14 +65,12 @@ class NotificationService {
           filter: `recipient_id=eq.${userId}`,
         },
         (payload) => {
-          // Format the payload into a Notification object
           const notification = payload.new as Notification;
           onNotificationReceived(notification);
         }
       )
       .subscribe();
 
-    // Return unsubscribe function
     return () => {
       supabase.removeChannel(channel);
     };
@@ -168,26 +195,6 @@ class NotificationService {
     } catch (error) {
       console.error('Error in getUnreadCount:', error);
       return 0;
-    }
-  }
-
-  /**
-   * Create a notification
-   */
-  async createNotification(notification: Omit<Notification, 'id' | 'created_at'>): Promise<Notification> {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .insert([notification])
-        .select()
-        .single();
-        
-      if (error) throw error;
-      
-      return data as Notification;
-    } catch (error) {
-      console.error('Error in createNotification:', error);
-      throw error;
     }
   }
 }
