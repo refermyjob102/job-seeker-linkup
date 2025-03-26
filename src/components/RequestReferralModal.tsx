@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { chatService } from "@/services/chatService";
 
 interface RequestReferralModalProps {
   open: boolean;
@@ -36,18 +37,61 @@ const RequestReferralModal = ({
   const [jobLink, setJobLink] = useState("");
   const [jobCode, setJobCode] = useState("");
   const [roleName, setRoleName] = useState(jobTitle);
+  const [resumeUrl, setResumeUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to request a referral.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Create the referral request in the database
+      const referralData = {
+        seeker_id: user.id,
+        referrer_id: referrerId,
+        company_id: companyId,
+        position: roleName,
+        notes: message,
+        resume_url: resumeUrl || null,
+        status: 'pending'
+      };
+      
+      const { data: referral, error } = await supabase
+        .from('referrals')
+        .insert([referralData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Create a notification for the referrer
+      if (referrerId) {
+        const notificationData = {
+          recipient_id: referrerId,
+          sender_id: user.id,
+          type: 'referral_request',
+          content: `${user.first_name} ${user.last_name} is requesting a referral for the ${roleName} position at ${companyName}.`,
+          referral_id: referral.id,
+          is_read: false
+        };
+        
+        await supabase.from('notifications').insert([notificationData]);
+      }
+      
+      // Close the modal
       onOpenChange(false);
       
       // Show success toast
@@ -59,12 +103,33 @@ const RequestReferralModal = ({
 
       // If we have a referrer ID, navigate to chat with them
       if (referrerId) {
+        // Get or create a conversation
+        const conversationId = await chatService.getOrCreateConversation(user.id, referrerId);
+        
+        // Send an initial message in the conversation
+        await chatService.sendMessage(
+          conversationId,
+          user.id,
+          referrerId,
+          `Hi! I just sent you a referral request for the ${roleName} position at ${companyName}. I appreciate your consideration.`
+        );
+        
+        // Navigate to the chat
         navigate(`/app/chat/${referrerId}`);
       } else {
         // Otherwise navigate to the referrals page
         navigate('/app/referrals');
       }
-    }, 1500);
+    } catch (error) {
+      console.error("Error submitting referral request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send referral request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -109,6 +174,16 @@ const RequestReferralModal = ({
               value={jobCode}
               onChange={(e) => setJobCode(e.target.value)}
               placeholder="Job ID or reference code"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="resumeUrl">Resume URL (Optional)</Label>
+            <Input
+              id="resumeUrl"
+              value={resumeUrl}
+              onChange={(e) => setResumeUrl(e.target.value)}
+              placeholder="Link to your resume or portfolio"
             />
           </div>
           

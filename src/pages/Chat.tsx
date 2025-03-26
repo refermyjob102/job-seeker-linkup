@@ -8,170 +8,33 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Send, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { chatService, ChatMessage, Conversation } from "@/services/chatService";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Mock chat data
-const mockChats = [
-  {
-    id: "1",
-    userId: "2",
-    name: "Jane Smith",
-    avatar: "https://i.pravatar.cc/150?img=2",
-    company: "Google",
-    jobTitle: "Senior Developer",
-    lastMessage: "Thanks for reaching out! I'd be happy to refer you.",
-    timestamp: new Date(2023, 5, 15, 14, 30),
-    messages: [
-      {
-        id: "m1",
-        sender: "2",
-        text: "Hi there! I noticed you're interested in a referral at Google?",
-        timestamp: new Date(2023, 5, 15, 12, 15),
-      },
-      {
-        id: "m2",
-        sender: "1",
-        text: "Yes, I've been learning React for a while and saw you're a Senior Developer there. Would you consider referring me?",
-        timestamp: new Date(2023, 5, 15, 12, 20),
-      },
-      {
-        id: "m3",
-        sender: "2",
-        text: "I'd be happy to look at your profile. Have you applied to any specific positions?",
-        timestamp: new Date(2023, 5, 15, 12, 30),
-      },
-      {
-        id: "m4",
-        sender: "1",
-        text: "I'm interested in the Frontend Developer role in the Cloud division.",
-        timestamp: new Date(2023, 5, 15, 12, 35),
-      },
-      {
-        id: "m5",
-        sender: "2",
-        text: "Thanks for reaching out! I'd be happy to refer you.",
-        timestamp: new Date(2023, 5, 15, 14, 30),
-      },
-    ],
-  },
-  {
-    id: "2",
-    userId: "3",
-    name: "Alex Johnson",
-    avatar: "https://i.pravatar.cc/150?img=3",
-    company: "Meta",
-    jobTitle: "Product Manager",
-    lastMessage: "I'll submit your referral this week.",
-    timestamp: new Date(2023, 5, 14, 9, 15),
-    messages: [
-      {
-        id: "m1",
-        sender: "3",
-        text: "Hello! I saw your request for a Meta referral.",
-        timestamp: new Date(2023, 5, 14, 8, 45),
-      },
-      {
-        id: "m2",
-        sender: "1",
-        text: "Hi Alex! Yes, I'm very interested in the Product Designer role at Meta.",
-        timestamp: new Date(2023, 5, 14, 8, 50),
-      },
-      {
-        id: "m3",
-        sender: "3",
-        text: "I'll submit your referral this week.",
-        timestamp: new Date(2023, 5, 14, 9, 15),
-      },
-    ],
-  },
-  {
-    id: "3",
-    userId: "4",
-    name: "Sarah Williams",
-    avatar: "https://i.pravatar.cc/150?img=4",
-    company: "Apple",
-    jobTitle: "UX Designer",
-    lastMessage: "Could you share your portfolio with me?",
-    timestamp: new Date(2023, 5, 10, 15, 45),
-    messages: [
-      {
-        id: "m1",
-        sender: "4",
-        text: "Thanks for reaching out about a referral at Apple.",
-        timestamp: new Date(2023, 5, 10, 15, 30),
-      },
-      {
-        id: "m2",
-        sender: "1",
-        text: "I appreciate you responding! I'm really interested in joining the UX team at Apple.",
-        timestamp: new Date(2023, 5, 10, 15, 40),
-      },
-      {
-        id: "m3",
-        sender: "4",
-        text: "Could you share your portfolio with me?",
-        timestamp: new Date(2023, 5, 10, 15, 45),
-      },
-    ],
-  },
-];
-
-// Utility function to create a websocket connection
-const createChatConnection = (userId: string, onMessageReceived: (message: any) => void) => {
-  // For demo purposes, we'll use a mock WebSocket
-  console.log(`Creating chat connection for user ${userId}`);
-  
-  // This would normally be a real WebSocket connection
-  const mockSocket = {
-    send: (data: string) => {
-      console.log(`Mock WebSocket sending: ${data}`);
-      // In a real implementation, this would send data to the server
-    },
-    close: () => {
-      console.log("Mock WebSocket closed");
-    }
-  };
-  
-  // Simulate receiving messages
-  const simulateMessageReceived = (chatId: string) => {
-    const randomResponses = [
-      "Thanks for your message. I'll get back to you soon.",
-      "That sounds interesting! Can you tell me more?",
-      "I've forwarded your request to our hiring team.",
-      "Let me know if you have any other questions!",
-      "Could you share your resume with me?",
-      "Have you applied to the position yet?"
-    ];
-    
-    setTimeout(() => {
-      const response = randomResponses[Math.floor(Math.random() * randomResponses.length)];
-      const message = {
-        id: `sim-${Date.now()}`,
-        chatId: chatId,
-        senderId: chatId, // The chat ID corresponds to the other user's ID
-        text: response,
-        timestamp: new Date()
-      };
-      
-      onMessageReceived(message);
-    }, 3000 + Math.random() * 5000); // Random delay between 3-8 seconds
-  };
-  
-  return {
-    socket: mockSocket,
-    simulateResponse: simulateMessageReceived
-  };
+const formatInitials = (name?: string) => {
+  if (!name) return "??";
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
 };
 
 const Chat = () => {
-  const { id } = useParams();
+  const { id: contactId } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [chats, setChats] = useState(mockChats);
-  const [currentChat, setCurrentChat] = useState<typeof mockChats[0] | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState("");
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
+  const [loading, setLoading] = useState(true);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatConnectionRef = useRef<any>(null);
+  const chatSubscriptionRef = useRef<() => void>();
+  const otherParticipant = currentConversation?.participants.find(
+    p => p.user_id !== user?.id
+  );
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -180,73 +43,220 @@ const Chat = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentChat?.messages]);
+  }, [messages]);
 
-  // Setup the chat connection when the component loads
+  // Load conversations
   useEffect(() => {
-    if (user) {
-      const handleMessageReceived = (message: any) => {
-        if (currentChat && message.chatId === currentChat.id) {
-          // Update the current chat with the new message
-          const updatedChat = {
-            ...currentChat,
-            lastMessage: message.text,
-            timestamp: message.timestamp,
-            messages: [
-              ...currentChat.messages,
-              {
-                id: message.id,
-                sender: message.senderId,
-                text: message.text,
-                timestamp: message.timestamp
-              }
-            ]
-          };
+    const loadConversations = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const loadedConversations = await chatService.getConversations(user.id);
+        setConversations(loadedConversations);
+        
+        // If we have a contact ID from the URL, find or create a conversation with them
+        if (contactId && contactId !== 'inbox') {
+          try {
+            // Get or create conversation with this contact
+            const conversationId = await chatService.getOrCreateConversation(user.id, contactId);
+            
+            // Find this conversation in our loaded conversations or reload it
+            let targetConversation = loadedConversations.find(c => c.id === conversationId);
+            
+            if (!targetConversation) {
+              // If we just created a new conversation, reload all conversations
+              const updatedConversations = await chatService.getConversations(user.id);
+              setConversations(updatedConversations);
+              targetConversation = updatedConversations.find(c => c.id === conversationId);
+            }
+            
+            if (targetConversation) {
+              setCurrentConversation(targetConversation);
+              // Load messages for this conversation
+              const conversationMessages = await chatService.getMessages(conversationId);
+              setMessages(conversationMessages);
+              
+              // Mark messages as read
+              await chatService.markConversationAsRead(conversationId, user.id);
+            }
+          } catch (error) {
+            console.error('Error initializing conversation with contact:', error);
+            toast({
+              title: "Error",
+              description: "Failed to open conversation with this contact.",
+              variant: "destructive",
+            });
+          }
+        } else if (loadedConversations.length > 0) {
+          // If no contact ID but we have conversations, open the first one
+          setCurrentConversation(loadedConversations[0]);
+          const conversationMessages = await chatService.getMessages(loadedConversations[0].id);
+          setMessages(conversationMessages);
           
-          setCurrentChat(updatedChat);
+          // Mark messages as read
+          await chatService.markConversationAsRead(loadedConversations[0].id, user.id);
+        }
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your conversations. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadConversations();
+  }, [user, contactId, toast]);
+  
+  // Subscribe to new messages
+  useEffect(() => {
+    if (!user) return;
+    
+    // Subscribe to new messages
+    const unsubscribe = chatService.subscribeToMessages(
+      user.id,
+      (newMessage) => {
+        // If this message is for our current conversation, add it to the messages list
+        if (currentConversation && newMessage.conversation_id === currentConversation.id) {
+          setMessages(prevMessages => [...prevMessages, newMessage]);
           
-          // Also update the chat in the chats list
-          setChats(chats.map(chat => 
-            chat.id === updatedChat.id ? updatedChat : chat
-          ));
+          // Mark message as read
+          chatService.markConversationAsRead(currentConversation.id, user.id);
+        }
+        
+        // Update the conversations list with the new message
+        setConversations(prevConversations => 
+          prevConversations.map(conv => {
+            if (conv.id === newMessage.conversation_id) {
+              return {
+                ...conv,
+                last_message: newMessage.content,
+                last_message_at: newMessage.created_at,
+                updated_at: newMessage.created_at
+              };
+            }
+            return conv;
+          }).sort((a, b) => {
+            // Sort by updated_at (most recent first)
+            const dateA = new Date(a.updated_at).getTime();
+            const dateB = new Date(b.updated_at).getTime();
+            return dateB - dateA;
+          })
+        );
+        
+        // Show notification for new message if not from the current conversation
+        if (currentConversation && newMessage.conversation_id !== currentConversation.id) {
+          // Find the conversation to get the sender's name
+          const conversation = conversations.find(c => c.id === newMessage.conversation_id);
+          const sender = conversation?.participants.find(p => p.user_id === newMessage.sender_id);
+          const senderName = sender ? `${sender.first_name || ''} ${sender.last_name || ''}`.trim() : 'Someone';
           
-          // Show a notification
           toast({
-            title: "New message",
-            description: `${currentChat.name}: ${message.text.substring(0, 50)}${message.text.length > 50 ? '...' : ''}`,
+            title: `New message from ${senderName}`,
+            description: newMessage.content.length > 50 
+              ? `${newMessage.content.substring(0, 50)}...` 
+              : newMessage.content,
           });
         }
-      };
-      
-      chatConnectionRef.current = createChatConnection(user.id, handleMessageReceived);
-      setConnectionStatus("connected");
-      
-      return () => {
-        if (chatConnectionRef.current) {
-          chatConnectionRef.current.socket.close();
-          setConnectionStatus("disconnected");
-        }
-      };
-    }
-  }, [user, toast]);
-
-  // Set the current chat when the ID changes
-  useEffect(() => {
-    if (id) {
-      const chat = mockChats.find(chat => chat.id === id);
-      if (chat) {
-        setCurrentChat(chat);
       }
-    } else if (mockChats.length > 0) {
-      setCurrentChat(mockChats[0]);
+    );
+    
+    chatSubscriptionRef.current = unsubscribe;
+    
+    return () => {
+      // Cleanup subscription on unmount
+      if (chatSubscriptionRef.current) {
+        chatSubscriptionRef.current();
+      }
+    };
+  }, [user, conversations, currentConversation, toast]);
+  
+  // Handle switching conversations
+  const handleSelectConversation = async (conversation: Conversation) => {
+    if (!user) return;
+    
+    setCurrentConversation(conversation);
+    setLoading(true);
+    
+    try {
+      // Load messages for this conversation
+      const conversationMessages = await chatService.getMessages(conversation.id);
+      setMessages(conversationMessages);
+      
+      // Mark messages as read
+      await chatService.markConversationAsRead(conversation.id, user.id);
+    } catch (error) {
+      console.error('Error loading conversation messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load messages for this conversation.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
+  };
 
-  const formatTime = (date: Date) => {
+  const handleSendMessage = async () => {
+    if (!message.trim() || !currentConversation || !user || !otherParticipant) return;
+    
+    const trimmedMessage = message.trim();
+    setMessage("");
+    setSendingMessage(true);
+    
+    try {
+      const newMessage = await chatService.sendMessage(
+        currentConversation.id,
+        user.id,
+        otherParticipant.user_id,
+        trimmedMessage
+      );
+      
+      // Add the new message to our messages array
+      setMessages(prevMessages => [...prevMessages, newMessage]);
+      
+      // Update the conversation in our list
+      setConversations(prevConversations => 
+        prevConversations.map(conv => {
+          if (conv.id === currentConversation.id) {
+            return {
+              ...conv,
+              last_message: trimmedMessage,
+              last_message_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+          }
+          return conv;
+        }).sort((a, b) => {
+          // Sort by updated_at (most recent first)
+          const dateA = new Date(a.updated_at).getTime();
+          const dateB = new Date(b.updated_at).getTime();
+          return dateB - dateA;
+        })
+      );
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -260,44 +270,9 @@ const Chat = () => {
     }
   };
 
-  const handleSendMessage = () => {
-    if (!message.trim() || !currentChat || !user) return;
-    
-    // Create the new message
-    const newMessage = {
-      id: `m${currentChat.messages.length + 1}`,
-      sender: user.id,
-      text: message,
-      timestamp: new Date(),
-    };
-    
-    // Update the current chat with the new message
-    const updatedChat = {
-      ...currentChat,
-      lastMessage: message,
-      timestamp: new Date(),
-      messages: [...currentChat.messages, newMessage],
-    };
-    
-    // Update state
-    setChats(chats.map(chat => 
-      chat.id === currentChat.id ? updatedChat : chat
-    ));
-    setCurrentChat(updatedChat);
-    setMessage("");
-    
-    // Simulate sending the message via WebSocket
-    if (chatConnectionRef.current) {
-      chatConnectionRef.current.socket.send(JSON.stringify({
-        action: "sendMessage",
-        chatId: currentChat.id,
-        text: message,
-        timestamp: new Date()
-      }));
-      
-      // Simulate receiving a response
-      chatConnectionRef.current.simulateResponse(currentChat.id);
-    }
+  const getParticipantName = (participant: typeof otherParticipant) => {
+    if (!participant) return "Unknown";
+    return `${participant.first_name || ''} ${participant.last_name || ''}`.trim() || "Unknown";
   };
 
   return (
@@ -310,81 +285,132 @@ const Chat = () => {
           <div className="p-4 border-b">
             <h2 className="font-semibold text-lg">Recent Conversations</h2>
             <div className="flex items-center mt-1">
-              <div className={`h-2 w-2 rounded-full mr-2 ${connectionStatus === "connected" ? "bg-green-500" : "bg-red-500"}`}></div>
-              <span className="text-xs text-muted-foreground">
-                {connectionStatus === "connected" ? "Connected" : "Disconnected"}
-              </span>
+              <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
+              <span className="text-xs text-muted-foreground">Connected</span>
             </div>
           </div>
-          <div className="divide-y max-h-[60vh] overflow-y-auto">
-            {chats.map((chat) => (
-              <div 
-                key={chat.id}
-                className={`p-4 hover:bg-muted cursor-pointer ${currentChat?.id === chat.id ? 'bg-muted' : ''}`}
-                onClick={() => setCurrentChat(chat)}
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar>
-                    <AvatarImage src={chat.avatar} alt={chat.name} />
-                    <AvatarFallback>{chat.name.substring(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between">
-                      <h3 className="font-medium truncate">{chat.name}</h3>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(chat.timestamp)}</span>
+          
+          {loading && !conversations.length ? (
+            <div className="divide-y">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-3 w-1/3" />
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{chat.company} • {chat.jobTitle}</p>
-                    <p className="text-sm truncate">{chat.lastMessage}</p>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y max-h-[60vh] overflow-y-auto">
+              {conversations.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <Info className="mx-auto h-8 w-8 mb-2 text-muted-foreground/70" />
+                  <p>No conversations yet</p>
+                  <p className="text-sm mt-1">Start a chat with someone to begin</p>
+                </div>
+              ) : (
+                conversations.map((conv) => {
+                  const participant = conv.participants.find(p => p.user_id !== user?.id);
+                  return (
+                    <div 
+                      key={conv.id}
+                      className={`p-4 hover:bg-muted cursor-pointer ${currentConversation?.id === conv.id ? 'bg-muted' : ''}`}
+                      onClick={() => handleSelectConversation(conv)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar>
+                          <AvatarImage src={participant?.avatar_url} alt={getParticipantName(participant)} />
+                          <AvatarFallback>{formatInitials(getParticipantName(participant))}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between">
+                            <h3 className="font-medium truncate">{getParticipantName(participant)}</h3>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {conv.last_message_at ? formatDate(conv.last_message_at) : formatDate(conv.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {participant?.job_title}{participant?.company ? ` • ${participant.company}` : ''}
+                          </p>
+                          <p className="text-sm truncate">{conv.last_message || 'Start a conversation'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
         
         {/* Chat messages */}
         <div className="col-span-1 md:col-span-2">
-          {currentChat ? (
+          {currentConversation ? (
             <Card className="h-full flex flex-col">
               <CardHeader className="flex-shrink-0 pb-3">
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarImage src={currentChat.avatar} alt={currentChat.name} />
-                    <AvatarFallback>{currentChat.name.substring(0, 2)}</AvatarFallback>
+                    <AvatarImage src={otherParticipant?.avatar_url} alt={getParticipantName(otherParticipant)} />
+                    <AvatarFallback>{formatInitials(getParticipantName(otherParticipant))}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle>{currentChat.name}</CardTitle>
-                    <CardDescription>{currentChat.company} • {currentChat.jobTitle}</CardDescription>
+                    <CardTitle>{getParticipantName(otherParticipant)}</CardTitle>
+                    <CardDescription>
+                      {otherParticipant?.job_title}{otherParticipant?.company ? ` • ${otherParticipant.company}` : ''}
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               
               <CardContent className="flex-1 overflow-y-auto space-y-4 pt-0 pb-4 mb-auto">
-                {currentChat.messages.map((msg) => {
-                  const isCurrentUser = msg.sender === user?.id;
-                  
-                  return (
-                    <div 
-                      key={msg.id} 
-                      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                    >
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                        <Skeleton className={`h-16 w-2/3 rounded-lg ${i % 2 === 0 ? 'rounded-br-none' : 'rounded-bl-none'}`} />
+                      </div>
+                    ))}
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-center p-4">
+                    <div>
+                      <Info className="mx-auto h-12 w-12 mb-4 text-muted-foreground/70" />
+                      <h3 className="text-lg font-medium mb-2">No messages yet</h3>
+                      <p className="text-muted-foreground">Send a message to start the conversation</p>
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isCurrentUser = msg.sender_id === user?.id;
+                    
+                    return (
                       <div 
-                        className={`max-w-[75%] rounded-lg p-3 ${
-                          isCurrentUser 
-                            ? 'bg-primary text-primary-foreground rounded-br-none' 
-                            : 'bg-muted rounded-bl-none'
-                        }`}
+                        key={msg.id} 
+                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
                       >
-                        <p>{msg.text}</p>
-                        <div className={`text-xs mt-1 ${
-                          isCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                        }`}>
-                          {formatTime(msg.timestamp)}
+                        <div 
+                          className={`max-w-[75%] rounded-lg p-3 ${
+                            isCurrentUser 
+                              ? 'bg-primary text-primary-foreground rounded-br-none' 
+                              : 'bg-muted rounded-bl-none'
+                          }`}
+                        >
+                          <p>{msg.content}</p>
+                          <div className={`text-xs mt-1 ${
+                            isCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          }`}>
+                            {formatTime(msg.created_at)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
                 <div ref={messagesEndRef} />
               </CardContent>
               
@@ -401,11 +427,12 @@ const Chat = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     className="flex-1"
+                    disabled={sendingMessage}
                   />
                   <Button 
                     type="submit"
                     size="icon"
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || sendingMessage}
                   >
                     <Send className="h-4 w-4" />
                   </Button>

@@ -6,7 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BadgeCheck, Briefcase, ChevronDown, ChevronUp, MapPin, Clock, User } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import RequestReferralModal from "@/components/RequestReferralModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 // Mock job data structure
 interface JobOpening {
@@ -41,6 +44,12 @@ const ViewOpenPositionsModal = ({
   companyId,
   companyName,
 }: ViewOpenPositionsModalProps) => {
+  // State for managing referral request modal
+  const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [selectedReferrer, setSelectedReferrer] = useState<{id: string, name: string} | null>(null);
+  const [selectedJob, setSelectedJob] = useState<{id: string, title: string} | null>(null);
+  const { toast } = useToast();
+  
   // Mock job data - in a real app, this would come from an API call
   const mockJobs: JobOpening[] = [
     {
@@ -143,133 +152,156 @@ const ViewOpenPositionsModal = ({
 
   // Check if a job is expanded
   const isJobExpanded = (jobId: string) => expandedJobs.includes(jobId);
+  
+  // Handle opening the referral request modal
+  const handleRequestReferral = (job: {id: string, title: string}, referrer: {id: string, name: string}) => {
+    setSelectedJob(job);
+    setSelectedReferrer(referrer);
+    setReferralModalOpen(true);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Open Positions at {companyName}</DialogTitle>
-          <DialogDescription>
-            View available job opportunities and connect with potential referrers.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          {mockJobs.map((job) => (
-            <div 
-              key={job.id} 
-              className="border rounded-lg hover:border-primary/50 transition-colors"
-            >
-              <div className="p-4">
-                <div className="flex flex-col space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-lg">{job.title}</h3>
-                      <p className="text-sm text-muted-foreground">{job.company}</p>
+    <>
+      <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Open Positions at {companyName}</DialogTitle>
+            <DialogDescription>
+              View available job opportunities and connect with potential referrers.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {mockJobs.map((job) => (
+              <div 
+                key={job.id} 
+                className="border rounded-lg hover:border-primary/50 transition-colors"
+              >
+                <div className="p-4">
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-lg">{job.title}</h3>
+                        <p className="text-sm text-muted-foreground">{job.company}</p>
+                      </div>
+                      {job.hasReferrers && (
+                        <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                          <BadgeCheck className="h-3 w-3 mr-1" />
+                          Has Referrers
+                        </Badge>
+                      )}
                     </div>
-                    {job.hasReferrers && (
-                      <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                        <BadgeCheck className="h-3 w-3 mr-1" />
-                        Has Referrers
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {job.location}
-                    </div>
-                    <div className="flex items-center">
-                      <Briefcase className="h-4 w-4 mr-1" />
-                      {job.type}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      Posted {job.postedDate}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 mt-2">
-                    <Button asChild className="flex-1 sm:flex-none">
-                      <Link to={`/app/jobs/${job.id}`}>
-                        View Details
-                      </Link>
-                    </Button>
                     
-                    {job.hasReferrers ? (
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 sm:flex-none"
-                        onClick={() => toggleJobExpansion(job.id)}
-                      >
-                        {isJobExpanded(job.id) ? (
-                          <>Hide Referrers <ChevronUp className="ml-1 h-4 w-4" /></>
-                        ) : (
-                          <>Find Referrers <ChevronDown className="ml-1 h-4 w-4" /></>
-                        )}
+                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                      <div className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {job.location}
+                      </div>
+                      <div className="flex items-center">
+                        <Briefcase className="h-4 w-4 mr-1" />
+                        {job.type}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        Posted {job.postedDate}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mt-2">
+                      <Button asChild className="flex-1 sm:flex-none">
+                        <Link to={`/app/jobs/${job.id}`}>
+                          View Details
+                        </Link>
                       </Button>
-                    ) : (
-                      <Button variant="outline" className="flex-1 sm:flex-none" disabled>
-                        No Referrers Available
-                      </Button>
-                    )}
+                      
+                      {job.hasReferrers ? (
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 sm:flex-none"
+                          onClick={() => toggleJobExpansion(job.id)}
+                        >
+                          {isJobExpanded(job.id) ? (
+                            <>Hide Referrers <ChevronUp className="ml-1 h-4 w-4" /></>
+                          ) : (
+                            <>Find Referrers <ChevronDown className="ml-1 h-4 w-4" /></>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="flex-1 sm:flex-none" disabled>
+                          No Referrers Available
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Referrers section - displayed when expanded */}
-              {isJobExpanded(job.id) && job.referrers && job.referrers.length > 0 && (
-                <div className="bg-muted/30 px-4 py-3 rounded-b-lg">
-                  <Separator className="mb-3" />
-                  <h4 className="text-sm font-medium mb-3 flex items-center">
-                    <User className="h-4 w-4 mr-2" /> 
-                    Available Referrers ({job.referrers.length})
-                  </h4>
-                  <div className="space-y-3">
-                    {job.referrers.map((referrer) => (
-                      <div key={referrer.id} className="bg-background p-3 rounded-md flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={referrer.avatar} alt={referrer.name} />
-                            <AvatarFallback>{referrer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{referrer.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {referrer.jobTitle} • {referrer.department}
-                            </p>
+                
+                {/* Referrers section - displayed when expanded */}
+                {isJobExpanded(job.id) && job.referrers && job.referrers.length > 0 && (
+                  <div className="bg-muted/30 px-4 py-3 rounded-b-lg">
+                    <Separator className="mb-3" />
+                    <h4 className="text-sm font-medium mb-3 flex items-center">
+                      <User className="h-4 w-4 mr-2" /> 
+                      Available Referrers ({job.referrers.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {job.referrers.map((referrer) => (
+                        <div key={referrer.id} className="bg-background p-3 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={referrer.avatar} alt={referrer.name} />
+                              <AvatarFallback>{referrer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">{referrer.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {referrer.jobTitle} • {referrer.department}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              asChild
+                              className="flex-1 sm:flex-none"
+                            >
+                              <Link to={`/app/members/${referrer.id}`}>
+                                View Profile
+                              </Link>
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="flex-1 sm:flex-none"
+                              onClick={() => handleRequestReferral({id: job.id, title: job.title}, {id: referrer.id, name: referrer.name})}
+                            >
+                              Request Referral
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            asChild
-                          >
-                            <Link to={`/app/members/${referrer.id}`}>
-                              View Profile
-                            </Link>
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            asChild
-                          >
-                            <Link to={`/app/chat/${referrer.id}?job=${encodeURIComponent(job.title)}`}>
-                              Message
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
+                )}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Referral Request Modal */}
+      {referralModalOpen && selectedReferrer && selectedJob && (
+        <RequestReferralModal
+          open={referralModalOpen}
+          onOpenChange={setReferralModalOpen}
+          jobId={selectedJob.id}
+          jobTitle={selectedJob.title}
+          companyId={companyId}
+          companyName={companyName}
+          referrerId={selectedReferrer.id}
+          referrerName={selectedReferrer.name}
+        />
+      )}
+    </>
   );
 };
 
