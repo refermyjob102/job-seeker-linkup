@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,152 +23,109 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { topCompanies, getCompanyById } from "@/data/topCompanies";
+import { getCompanyById } from "@/data/topCompanies";
 import ViewOpenPositionsModal from "@/components/ViewOpenPositionsModal";
 import { Separator } from "@/components/ui/separator";
+import { companyService } from "@/services/companyService";
+import { Company, Profile } from "@/types/database";
+import { useToast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Mock employees data
-const employeesData = [
-  {
-    id: "1",
-    name: "John Smith",
-    role: "Software Engineer",
-    department: "Engineering",
-    image: "https://i.pravatar.cc/150?img=1",
-    availableForReferrals: true,
-    company_id: "1",
-    joined: "2020"
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    role: "Product Manager",
-    department: "Product",
-    image: "https://i.pravatar.cc/150?img=2",
-    availableForReferrals: true,
-    company_id: "1",
-    joined: "2019"
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    role: "Data Scientist",
-    department: "Data",
-    image: "https://i.pravatar.cc/150?img=3",
-    availableForReferrals: false,
-    company_id: "1",
-    joined: "2021"
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    role: "UX Designer",
-    department: "Design",
-    image: "https://i.pravatar.cc/150?img=4",
-    availableForReferrals: true,
-    company_id: "2",
-    joined: "2018"
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    role: "DevOps Engineer",
-    department: "Infrastructure",
-    image: "https://i.pravatar.cc/150?img=5",
-    availableForReferrals: false,
-    company_id: "2",
-    joined: "2022"
-  },
-  {
-    id: "6",
-    name: "Jessica Martinez",
-    role: "Marketing Director",
-    department: "Marketing",
-    image: "https://i.pravatar.cc/150?img=6",
-    availableForReferrals: true,
-    company_id: "3",
-    joined: "2017"
-  },
-  {
-    id: "7",
-    name: "Ryan Taylor",
-    role: "Frontend Developer",
-    department: "Engineering",
-    image: "https://i.pravatar.cc/150?img=7",
-    availableForReferrals: true,
-    company_id: "3",
-    joined: "2020"
-  },
-  {
-    id: "8",
-    name: "Amanda Thomas",
-    role: "HR Manager",
-    department: "Human Resources",
-    image: "https://i.pravatar.cc/150?img=8",
-    availableForReferrals: false,
-    company_id: "4",
-    joined: "2019"
-  }
-];
+interface CompanyMemberWithProfile {
+  id: string;
+  company_id: string;
+  user_id: string;
+  job_title: string;
+  department?: string;
+  joined_at: string;
+  profiles: Profile;
+}
 
 const CompanyMembers = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const positionFilter = searchParams.get('position');
+  const { toast } = useToast();
   
-  const [company, setCompany] = useState<any>(null);
+  const [company, setCompany] = useState<Company | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<CompanyMemberWithProfile[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<CompanyMemberWithProfile[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [isOpenPositionsModalOpen, setIsOpenPositionsModalOpen] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    
-    // Get company data
-    if (id) {
-      const companyData = getCompanyById(id);
-      if (companyData) {
-        setCompany(companyData);
+    const fetchCompanyData = async () => {
+      setLoading(true);
+      
+      try {
+        // Get company data
+        if (id) {
+          // First try to get from Supabase
+          const companyData = await companyService.getCompanyById(id);
+          
+          if (companyData) {
+            setCompany(companyData);
+            
+            // Get company members
+            const companyMembers = await companyService.getCompanyMembers(id);
+            setEmployees(companyMembers);
+            setFilteredEmployees(companyMembers);
+          } else {
+            // Fallback to mock data
+            const fallbackCompany = getCompanyById(id);
+            if (fallbackCompany) {
+              setCompany(fallbackCompany as unknown as Company);
+              // Use empty array for employees as we don't have real data
+              setEmployees([]);
+              setFilteredEmployees([]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching company data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load company data. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-    }
+    };
     
-    // Get company employees
-    const companyEmployees = employeesData.filter(emp => emp.company_id === id);
-    setEmployees(companyEmployees);
-    setFilteredEmployees(companyEmployees);
-    
-    setLoading(false);
-  }, [id]);
+    fetchCompanyData();
+  }, [id, toast]);
 
   useEffect(() => {
     filterEmployees();
   }, [filter, searchTerm, employees, positionFilter]);
 
   const filterEmployees = () => {
+    if (!employees.length) return;
+    
     let filtered = employees;
     
     // Apply search term
     if (searchTerm) {
       filtered = filtered.filter(emp => 
-        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.department.toLowerCase().includes(searchTerm.toLowerCase())
+        emp.profiles.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.profiles.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.job_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.department && emp.department.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     
     // Apply available for referrals filter
     if (filter === "available") {
-      filtered = filtered.filter(emp => emp.availableForReferrals);
+      filtered = filtered.filter(emp => emp.profiles.available_for_referrals);
     }
     
     // Apply position filter from URL
     if (positionFilter) {
-      // In a real app, this would filter employees who can refer for this position
-      // For now, just show available referrers
-      filtered = filtered.filter(emp => emp.availableForReferrals);
+      // Filter employees who can refer for this position (those available for referrals)
+      filtered = filtered.filter(emp => emp.profiles.available_for_referrals);
     }
     
     setFilteredEmployees(filtered);
@@ -182,8 +138,12 @@ const CompanyMembers = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p>Loading company information...</p>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-24" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
@@ -198,17 +158,17 @@ const CompanyMembers = () => {
     );
   }
 
-  const referrersCount = filteredEmployees.filter(emp => emp.availableForReferrals).length;
+  const referrersCount = filteredEmployees.filter(emp => emp.profiles.available_for_referrals).length;
 
   // Enhanced company details for LinkedIn-like experience
   const companyDetails = {
     founded: "2015",
-    industry: company.sector,
-    size: `${parseInt(company.id) * 100}+ employees`,
-    headquarters: "San Francisco, CA",
-    website: "https://www.example.com",
+    industry: company.description || "Technology",
+    size: `${filteredEmployees.length}+ employees`,
+    headquarters: company.location || "San Francisco, CA",
+    website: company.website || "https://www.example.com",
     specialties: ["Software Development", "Cloud Computing", "Data Analytics", "AI/ML"],
-    description: `${company.name} is a leading company in the ${company.sector} industry, focused on delivering innovative solutions that transform businesses. With a team of dedicated professionals, we're committed to excellence and creating value for our clients and stakeholders. Our mission is to leverage technology to solve complex problems and drive meaningful change.`,
+    description: company.description || `${company.name} is a leading company in the technology industry, focused on delivering innovative solutions that transform businesses. With a team of dedicated professionals, we're committed to excellence and creating value for our clients and stakeholders. Our mission is to leverage technology to solve complex problems and drive meaningful change.`,
     foundersInfo: "Founded by tech industry veterans with a passion for innovation and problem-solving.",
     culture: "We foster a collaborative environment where creativity, diversity, and continuous learning are valued. Our team members are encouraged to take initiative and contribute to our shared success.",
     contactEmail: "info@example.com",
@@ -228,13 +188,17 @@ const CompanyMembers = () => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
               <div className="bg-muted flex items-center justify-center p-6 rounded-md h-24 w-24">
-                <Building className="h-12 w-12 text-muted-foreground" />
+                {company.logo_url ? (
+                  <img src={company.logo_url} alt={company.name} className="h-full w-full object-contain" />
+                ) : (
+                  <Building className="h-12 w-12 text-muted-foreground" />
+                )}
               </div>
               
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-2xl font-bold mb-2">{company.name}</h1>
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                  <Badge variant="outline">{company.sector}</Badge>
+                  <Badge variant="outline">{companyDetails.industry}</Badge>
                   <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
                     {companyDetails.size}
                   </Badge>
@@ -245,7 +209,7 @@ const CompanyMembers = () => {
                     <span className="text-muted-foreground text-sm">Company Size</span>
                     <span className="font-medium flex items-center">
                       <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {parseInt(company.id) * 100}+ employees
+                      {filteredEmployees.length || 0} employees
                     </span>
                   </div>
                   <div className="flex flex-col items-center md:items-start">
@@ -259,7 +223,7 @@ const CompanyMembers = () => {
                     <span className="text-muted-foreground text-sm">Open Positions</span>
                     <span className="font-medium flex items-center">
                       <Briefcase className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {parseInt(company.id) * 3} openings
+                      {parseInt(company.id) * 3 || 5} openings
                     </span>
                   </div>
                 </div>
@@ -269,7 +233,7 @@ const CompanyMembers = () => {
                     View Open Positions
                   </Button>
                   <Button variant="outline" asChild>
-                    <a href={`https://www.google.com/search?q=${encodeURIComponent(company.name)}`} target="_blank" rel="noopener noreferrer">
+                    <a href={company.website || `https://www.google.com/search?q=${encodeURIComponent(company.name)}`} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Visit Website
                     </a>
@@ -407,16 +371,18 @@ const CompanyMembers = () => {
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={employee.image} alt={employee.name} />
-                        <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={employee.profiles.avatar_url || ''} alt={`${employee.profiles.first_name} ${employee.profiles.last_name}`} />
+                        <AvatarFallback>{employee.profiles.first_name.charAt(0)}{employee.profiles.last_name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{employee.name}</h3>
-                        <p className="text-sm text-muted-foreground truncate">{employee.role}</p>
-                        <p className="text-sm text-muted-foreground truncate">{employee.department} • Since {employee.joined}</p>
+                        <h3 className="font-medium truncate">{employee.profiles.first_name} {employee.profiles.last_name}</h3>
+                        <p className="text-sm text-muted-foreground truncate">{employee.job_title}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {employee.department || 'General'} • Since {new Date(employee.joined_at).getFullYear()}
+                        </p>
                         
                         <div className="flex mt-3">
-                          {employee.availableForReferrals && (
+                          {employee.profiles.available_for_referrals && (
                             <Badge className="mr-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 flex items-center">
                               <BadgeCheck className="h-3 w-3 mr-1" />
                               Available for Referrals
@@ -428,7 +394,7 @@ const CompanyMembers = () => {
                     
                     <div className="mt-4 flex justify-end">
                       <Button variant="outline" asChild>
-                        <Link to={`/app/members/${employee.id}`}>
+                        <Link to={`/app/members/${employee.profiles.id}`}>
                           View Profile
                         </Link>
                       </Button>
