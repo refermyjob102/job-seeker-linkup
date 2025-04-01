@@ -43,16 +43,21 @@ class CompanyService {
       if (membersError) throw membersError;
       
       // Now also get profiles that have this company but aren't in company_members
-      const { data: profilesData, error: profilesError } = await supabase
+      const { data: profilesWithCompany, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('company', companyId)
-        .not('id', 'in', membersData.map(m => m.user_id).filter(Boolean));
+        .eq('company', companyId);
       
       if (profilesError) throw profilesError;
       
+      // Filter out profiles that are already in company_members
+      const existingUserIds = membersData.map(m => m.user_id);
+      const additionalProfiles = profilesWithCompany.filter(
+        profile => !existingUserIds.includes(profile.id)
+      );
+      
       // Convert profiles to CompanyMemberWithProfile format
-      const profileMembers = profilesData.map(profile => ({
+      const profileMembers = additionalProfiles.map(profile => ({
         id: crypto.randomUUID(), // Generate a temporary ID
         user_id: profile.id,
         company_id: companyId,
@@ -71,7 +76,13 @@ class CompanyService {
           department: m.department
         }));
         
-        await supabase.from('company_members').insert(membersToAdd);
+        const { error: insertError } = await supabase
+          .from('company_members')
+          .insert(membersToAdd);
+          
+        if (insertError) {
+          console.error('Error adding profiles to company_members:', insertError);
+        }
       }
       
       // Combine both lists
