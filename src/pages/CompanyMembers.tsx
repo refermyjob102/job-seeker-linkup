@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,19 +61,24 @@ const CompanyMembers = () => {
       setLoading(true);
       
       try {
+        console.log("Fetching company data for ID:", id);
         // Get company data
         if (id) {
           // First try to get from Supabase
           const companyData = await companyService.getCompanyById(id);
           
           if (companyData) {
+            console.log("Company data retrieved:", companyData);
             setCompany(companyData);
             
             // Get company members
+            console.log("Fetching company members...");
             const companyMembers = await companyService.getCompanyMembers(id);
+            console.log("Company members retrieved:", companyMembers);
             setEmployees(companyMembers);
             setFilteredEmployees(companyMembers);
           } else {
+            console.log("No company data found, falling back to mock data");
             // Fallback to mock data
             const fallbackCompany = getCompanyById(id);
             if (fallbackCompany) {
@@ -80,6 +86,8 @@ const CompanyMembers = () => {
               // Use empty array for employees as we don't have real data
               setEmployees([]);
               setFilteredEmployees([]);
+            } else {
+              console.log("No mock company found for ID:", id);
             }
           }
         }

@@ -31,6 +31,8 @@ class CompanyService {
    */
   async getCompanyMembers(companyId: string): Promise<CompanyMemberWithProfile[]> {
     try {
+      console.log('Fetching company members for company ID:', companyId);
+      
       // First get members from company_members table
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
@@ -40,23 +42,38 @@ class CompanyService {
         `)
         .eq('company_id', companyId);
 
-      if (membersError) throw membersError;
+      if (membersError) {
+        console.error('Error fetching company_members:', membersError);
+        throw membersError;
+      }
       
-      // Now also get profiles that have this company but aren't in company_members
+      console.log('Members from company_members table:', membersData);
+      
+      // Now also get profiles that have this company as their company
+      // but aren't in the company_members table yet
       const { data: profilesWithCompany, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .eq('company', companyId);
       
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error fetching profiles with company:', profilesError);
+        throw profilesError;
+      }
+      
+      console.log('Profiles with company set to this company ID:', profilesWithCompany);
       
       // Filter out profiles that are already in company_members
       const existingUserIds = membersData.map(m => m.user_id);
+      console.log('Existing user IDs in company_members:', existingUserIds);
+      
       const additionalProfiles = profilesWithCompany.filter(
         profile => !existingUserIds.includes(profile.id)
       );
       
-      // Convert profiles to CompanyMemberWithProfile format
+      console.log('Additional profiles not yet in company_members:', additionalProfiles);
+      
+      // Convert these profiles to CompanyMemberWithProfile format
       const profileMembers = additionalProfiles.map(profile => ({
         id: crypto.randomUUID(), // Generate a temporary ID
         user_id: profile.id,
@@ -69,6 +86,8 @@ class CompanyService {
       
       // Add these profiles to company_members for future reference
       if (profileMembers.length > 0) {
+        console.log('Adding profiles to company_members:', profileMembers.length);
+        
         const membersToAdd = profileMembers.map(m => ({
           user_id: m.user_id,
           company_id: companyId,
@@ -86,7 +105,9 @@ class CompanyService {
       }
       
       // Combine both lists
-      return [...membersData, ...profileMembers] as CompanyMemberWithProfile[];
+      const allMembers = [...membersData, ...profileMembers] as CompanyMemberWithProfile[];
+      console.log('Total company members:', allMembers.length);
+      return allMembers;
     } catch (error) {
       console.error('Error fetching company members:', error);
       return [];
