@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Notification {
@@ -55,7 +56,7 @@ class NotificationService {
     onNotificationReceived: (notification: Notification) => void
   ) {
     const channel = supabase
-      .channel('user_notifications')
+      .channel(`user_notifications_${userId}`)
       .on(
         'postgres_changes',
         {
@@ -94,7 +95,7 @@ class NotificationService {
           created_at,
           referral_id,
           conversation_id,
-          senders:sender_id (
+          senders:profiles!sender_id(
             first_name,
             last_name,
             avatar_url

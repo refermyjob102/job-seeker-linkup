@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -150,12 +149,29 @@ const JobDetails = () => {
       toast({
         title: "Application link unavailable",
         description: "The direct application link for this job is not available.",
+        variant: "destructive",
       });
       return;
     }
     
     // Open the application URL in a new tab
     window.open(job.apply_url, "_blank", "noopener,noreferrer");
+    
+    // Record the application in the database (if user is logged in)
+    if (user) {
+      try {
+        supabase.from('job_applications').insert({
+          user_id: user.id,
+          job_id: job.id,
+          applied_at: new Date().toISOString(),
+          application_method: 'direct'
+        }).then(({ error }) => {
+          if (error) console.error('Error recording application:', error);
+        });
+      } catch (error) {
+        console.error('Failed to record application:', error);
+      }
+    }
     
     toast({
       title: "Application started",

@@ -17,6 +17,8 @@ import SeekerTabs from "@/features/referrals/components/SeekerTabs";
 import ReferrerTabs from "@/features/referrals/components/ReferrerTabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
+import { notificationService } from "@/services/notificationService";
+import { chatService } from "@/services/chatService";
 
 const Referrals = () => {
   const { user } = useAuth();
@@ -177,16 +179,34 @@ const Referrals = () => {
       setIsUpdateModalOpen(false);
       
       // Create a notification for the seeker in the database
-      const notificationPayload = {
-        recipient_id: selectedReferral.applicant.id,
-        sender_id: user.id,
-        type: 'referral_update',
-        content: `Your referral request for ${selectedReferral.position} at ${selectedReferral.company} has been ${status}`,
-        referral_id: selectedReferral.id,
-        is_read: false
-      };
+      await notificationService.createNotification(
+        selectedReferral.applicant.id,
+        user.id,
+        'referral_update',
+        `Your referral request for ${selectedReferral.position} at ${selectedReferral.company} has been ${status}`,
+        { referral_id: selectedReferral.id }
+      );
       
-      await supabase.from('notifications').insert([notificationPayload]);
+      // If accepted, start a conversation to discuss next steps
+      if (status === 'accepted') {
+        try {
+          // Get or create a conversation with the seeker
+          const conversationId = await chatService.getOrCreateConversation(
+            user.id, 
+            selectedReferral.applicant.id
+          );
+          
+          // Send an initial message
+          await chatService.sendMessage(
+            conversationId,
+            user.id,
+            selectedReferral.applicant.id,
+            `Hi! I've accepted your referral request for ${selectedReferral.position} at ${selectedReferral.company}. Let's discuss the next steps.`
+          );
+        } catch (chatError) {
+          console.error('Error starting conversation after referral acceptance:', chatError);
+        }
+      }
       
     } catch (error) {
       console.error('Error updating referral status:', error);
@@ -198,12 +218,68 @@ const Referrals = () => {
     }
   };
 
-  const handleSendFollowUp = (referrerId: string) => {
-    navigate(`/app/chat/${referrerId}`);
+  const handleSendFollowUp = async (referrerId: string) => {
+    if (!user) return;
+    
+    try {
+      // Get or create a conversation with the referrer
+      const conversationId = await chatService.getOrCreateConversation(user.id, referrerId);
+      
+      // Send a follow-up message
+      await chatService.sendMessage(
+        conversationId,
+        user.id,
+        referrerId,
+        "Hi! I'm following up on my referral request. Is there any additional information you need from me?"
+      );
+      
+      toast({
+        title: "Follow-up Sent",
+        description: "Your follow-up message has been sent to the referrer.",
+      });
+      
+      // Navigate to the chat
+      navigate(`/app/chat/${referrerId}`);
+    } catch (error) {
+      console.error('Error sending follow-up:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send follow-up message. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSendThanks = (referrerId: string) => {
-    navigate(`/app/chat/${referrerId}`);
+  const handleSendThanks = async (referrerId: string) => {
+    if (!user) return;
+    
+    try {
+      // Get or create a conversation with the referrer
+      const conversationId = await chatService.getOrCreateConversation(user.id, referrerId);
+      
+      // Send a thank you message
+      await chatService.sendMessage(
+        conversationId,
+        user.id,
+        referrerId,
+        "Thank you so much for accepting my referral request! I really appreciate your help with this opportunity."
+      );
+      
+      toast({
+        title: "Thank You Sent",
+        description: "Your thank you message has been sent to the referrer.",
+      });
+      
+      // Navigate to the chat
+      navigate(`/app/chat/${referrerId}`);
+    } catch (error) {
+      console.error('Error sending thanks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send thank you message. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFindOthers = () => {

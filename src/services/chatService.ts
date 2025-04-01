@@ -27,20 +27,21 @@ class ChatService {
    * Get or create a conversation between two users
    */
   async getOrCreateConversation(user1Id: string, user2Id: string): Promise<string> {
-    // First, check if a conversation already exists
+    // First, check if a conversation already exists with both users as participants
     const { data: existingConversations, error: existingError } = await supabase
       .from('conversations')
       .select(`
         id,
         conversation_participants!inner(user_id)
       `)
-      .eq('conversation_participants.user_id', user1Id)
-      .eq('conversation_participants.user_id', user2Id)
-      .single();
+      .or(`and(conversation_participants.user_id.eq.${user1Id},conversation_participants.user_id.eq.${user2Id})`)
+      .limit(1);
 
-    if (existingError && existingError.code !== 'PGRST116') throw existingError;
+    if (existingError) throw existingError;
 
-    if (existingConversations?.id) return existingConversations.id;
+    if (existingConversations && existingConversations.length > 0) {
+      return existingConversations[0].id;
+    }
 
     // If no conversation exists, create a new one
     const { data: newConversation, error: conversationError } = await supabase
@@ -96,6 +97,19 @@ class ChatService {
         last_message_at: new Date().toISOString()
       })
       .eq('id', conversationId);
+      
+    // Create a notification for the recipient
+    try {
+      await supabase.from('notifications').insert({
+        recipient_id: receiverId,
+        sender_id: senderId,
+        type: 'new_message',
+        content: content.length > 50 ? `${content.substring(0, 50)}...` : content,
+        conversation_id: conversationId
+      });
+    } catch (notifError) {
+      console.error("Failed to create message notification:", notifError);
+    }
 
     return data;
   }
@@ -103,7 +117,7 @@ class ChatService {
   /**
    * Get messages for a conversation
    */
-  async getConversationMessages(conversationId: string): Promise<ChatMessage[]> {
+  async getMessages(conversationId: string): Promise<ChatMessage[]> {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
@@ -113,6 +127,73 @@ class ChatService {
     if (error) throw error;
 
     return data;
+  }
+
+  /**
+   * Get all conversations for a user
+   */
+  async getConversations(userId: string): Promise<Conversation[]> {
+    const { data, error } = await supabase
+      .from('conversations')
+      .select(`
+        id,
+        created_by,
+        created_at,
+        updated_at,
+        last_message,
+        last_message_at,
+        conversation_participants!inner(user_id),
+        conversation_participants(
+          user_id,
+          profiles:user_id(
+            id,
+            user_id:id,
+            first_name,
+            last_name,
+            avatar_url,
+            job_title,
+            company
+          )
+        )
+      `)
+      .contains('conversation_participants.user_id', [userId])
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Format the conversations data to match the Conversation interface
+    const conversations = data.map(conv => {
+      // Get all participants except the current user
+      const participants = conv.conversation_participants
+        .filter(p => p.user_id !== userId)
+        .map(p => p.profiles) as Profile[];
+
+      return {
+        id: conv.id,
+        created_by: conv.created_by,
+        created_at: conv.created_at,
+        updated_at: conv.updated_at,
+        last_message: conv.last_message,
+        last_message_at: conv.last_message_at,
+        participants: participants
+      };
+    });
+
+    return conversations;
+  }
+
+  /**
+   * Mark all messages in a conversation as read for a specific user
+   */
+  async markConversationAsRead(conversationId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('conversation_id', conversationId)
+      .eq('receiver_id', userId)
+      .is('read_at', null);
+
+    if (error) throw error;
   }
 
   /**
@@ -141,6 +222,49 @@ class ChatService {
     return () => {
       supabase.removeChannel(channel);
     };
+  }
+
+  /**
+   * Subscribe to all new messages for a user
+   */
+  subscribeToMessages(
+    userId: string,
+    onMessageReceived: (message: ChatMessage) => void
+  ) {
+    const channel = supabase
+      .channel(`user_messages_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${userId}`
+        },
+        (payload) => {
+          onMessageReceived(payload.new as ChatMessage);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+
+  /**
+   * Get unread message count for a user
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .is('read_at', null);
+
+    if (error) throw error;
+
+    return count || 0;
   }
 }
 

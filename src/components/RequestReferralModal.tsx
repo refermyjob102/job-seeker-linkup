@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { chatService } from "@/services/chatService";
+import { notificationService } from "@/services/notificationService";
 
 interface RequestReferralModalProps {
   open: boolean;
@@ -79,16 +81,13 @@ const RequestReferralModal = ({
       
       // Create a notification for the referrer
       if (referrerId) {
-        const notificationData = {
-          recipient_id: referrerId,
-          sender_id: user.id,
-          type: 'referral_request',
-          content: `${user.first_name} ${user.last_name} is requesting a referral for the ${roleName} position at ${companyName}.`,
-          referral_id: referral.id,
-          is_read: false
-        };
-        
-        await supabase.from('notifications').insert([notificationData]);
+        await notificationService.createNotification(
+          referrerId,
+          user.id,
+          'referral_request',
+          `${user.first_name} ${user.last_name} is requesting a referral for the ${roleName} position at ${companyName}.`,
+          { referral_id: referral.id }
+        );
       }
       
       // Close the modal
@@ -103,19 +102,25 @@ const RequestReferralModal = ({
 
       // If we have a referrer ID, navigate to chat with them
       if (referrerId) {
-        // Get or create a conversation
-        const conversationId = await chatService.getOrCreateConversation(user.id, referrerId);
-        
-        // Send an initial message in the conversation
-        await chatService.sendMessage(
-          conversationId,
-          user.id,
-          referrerId,
-          `Hi! I just sent you a referral request for the ${roleName} position at ${companyName}. I appreciate your consideration.`
-        );
-        
-        // Navigate to the chat
-        navigate(`/app/chat/${referrerId}`);
+        try {
+          // Get or create a conversation
+          const conversationId = await chatService.getOrCreateConversation(user.id, referrerId);
+          
+          // Send an initial message in the conversation
+          await chatService.sendMessage(
+            conversationId,
+            user.id,
+            referrerId,
+            `Hi! I just sent you a referral request for the ${roleName} position at ${companyName}. I appreciate your consideration.`
+          );
+          
+          // Navigate to the chat
+          navigate(`/app/chat/${referrerId}`);
+        } catch (chatError) {
+          console.error('Error creating chat for referral:', chatError);
+          // Navigate to referrals page if chat creation fails
+          navigate('/app/referrals');
+        }
       } else {
         // Otherwise navigate to the referrals page
         navigate('/app/referrals');

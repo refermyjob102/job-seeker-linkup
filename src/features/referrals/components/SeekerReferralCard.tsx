@@ -5,23 +5,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { getStatusBadge } from "../utils/statusHelpers";
 import { SeekerReferral } from "../data/mockReferrals";
+import { MessageSquare, ThumbsUp, Users } from "lucide-react";
 
 interface SeekerReferralCardProps {
   referral: SeekerReferral;
   onSendFollowUp?: (referrerId: string) => void;
   onSendThanks?: (referrerId: string) => void;
   onFindOthers?: () => void;
+  loading?: boolean;
 }
 
 const SeekerReferralCard = ({ 
   referral, 
   onSendFollowUp, 
   onSendThanks,
-  onFindOthers
+  onFindOthers,
+  loading = false
 }: SeekerReferralCardProps) => {
   const navigate = useNavigate();
 
   const getCardActions = () => {
+    if (loading) {
+      return (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          disabled
+        >
+          Loading...
+        </Button>
+      );
+    }
+    
     switch (referral.status) {
       case "pending":
         return (
@@ -30,6 +45,7 @@ const SeekerReferralCard = ({
             size="sm" 
             onClick={() => onSendFollowUp && onSendFollowUp(referral.referrer.id)}
           >
+            <MessageSquare className="h-4 w-4 mr-2" />
             Send Follow-up
           </Button>
         );
@@ -39,6 +55,7 @@ const SeekerReferralCard = ({
             size="sm" 
             onClick={() => onSendThanks && onSendThanks(referral.referrer.id)}
           >
+            <ThumbsUp className="h-4 w-4 mr-2" />
             Send Thanks
           </Button>
         );
@@ -49,6 +66,7 @@ const SeekerReferralCard = ({
             size="sm" 
             onClick={onFindOthers}
           >
+            <Users className="h-4 w-4 mr-2" />
             Find Others
           </Button>
         );
@@ -60,6 +78,7 @@ const SeekerReferralCard = ({
               size="sm" 
               onClick={() => navigate(`/app/chat/${referral.referrer.id}`)}
             >
+              <MessageSquare className="h-4 w-4 mr-2" />
               Message
             </Button>
             <Button 

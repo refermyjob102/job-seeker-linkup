@@ -5,15 +5,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { getStatusBadge } from "../utils/statusHelpers";
 import { ReferrerReferral } from "../data/mockReferrals";
+import { ClipboardEdit, MessageSquare } from "lucide-react";
 
 interface ReferrerReferralCardProps {
   referral: ReferrerReferral;
   onOpenStatusModal: (referral: ReferrerReferral) => void;
+  loading?: boolean;
 }
 
 const ReferrerReferralCard = ({ 
   referral, 
-  onOpenStatusModal 
+  onOpenStatusModal,
+  loading = false
 }: ReferrerReferralCardProps) => {
   const navigate = useNavigate();
 
@@ -48,14 +51,18 @@ const ReferrerReferralCard = ({
             variant="outline" 
             size="sm" 
             onClick={() => navigate(`/app/chat/${referral.applicant.id}`)}
+            disabled={loading}
           >
+            <MessageSquare className="h-4 w-4 mr-2" />
             Message
           </Button>
           {referral.status === "pending" && (
             <Button 
               size="sm"
               onClick={() => onOpenStatusModal(referral)}
+              disabled={loading}
             >
+              <ClipboardEdit className="h-4 w-4 mr-2" />
               Update Status
             </Button>
           )}
