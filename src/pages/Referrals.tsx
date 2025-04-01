@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +49,7 @@ const Referrals = () => {
               position,
               status,
               created_at,
+              referrer_id,
               companies:company_id(name)
             `)
             .eq('seeker_id', user.id);
@@ -103,8 +105,8 @@ const Referrals = () => {
               position,
               status,
               created_at,
-              companies:company_id(name),
-              seeker_id
+              seeker_id,
+              companies:company_id(name)
             `)
             .eq('referrer_id', user.id);
             

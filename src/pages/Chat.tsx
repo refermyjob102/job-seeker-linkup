@@ -315,7 +315,7 @@ const Chat = () => {
                 </div>
               ) : (
                 conversations.map((conv) => {
-                  const participant = conv.participants.find(p => p.user_id !== user?.id);
+                  const participant = conv.participants?.find(p => p.id !== user?.id);
                   return (
                     <div 
                       key={conv.id}

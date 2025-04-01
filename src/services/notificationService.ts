@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Notification {
@@ -117,7 +118,7 @@ class NotificationService {
       // Fetch sender profiles for notifications with a sender_id
       const senderIds = data
         .filter(n => n.sender_id)
-        .map(n => n.sender_id);
+        .map(n => n.sender_id as string);
       
       let senderProfiles = {};
       if (senderIds.length > 0) {
