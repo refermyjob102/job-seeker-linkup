@@ -31,7 +31,8 @@ class CompanyService {
    */
   async getCompanyMembers(companyId: string): Promise<CompanyMemberWithProfile[]> {
     try {
-      const { data, error } = await supabase
+      // First get members from company_members table
+      const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select(`
           *,
@@ -39,8 +40,42 @@ class CompanyService {
         `)
         .eq('company_id', companyId);
 
-      if (error) throw error;
-      return data as unknown as CompanyMemberWithProfile[];
+      if (membersError) throw membersError;
+      
+      // Now also get profiles that have this company but aren't in company_members
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('company', companyId)
+        .not('id', 'in', membersData.map(m => m.user_id).filter(Boolean));
+      
+      if (profilesError) throw profilesError;
+      
+      // Convert profiles to CompanyMemberWithProfile format
+      const profileMembers = profilesData.map(profile => ({
+        id: crypto.randomUUID(), // Generate a temporary ID
+        user_id: profile.id,
+        company_id: companyId,
+        job_title: profile.job_title || 'Member',
+        department: profile.department,
+        joined_at: profile.created_at,
+        profiles: profile
+      }));
+      
+      // Add these profiles to company_members for future reference
+      if (profileMembers.length > 0) {
+        const membersToAdd = profileMembers.map(m => ({
+          user_id: m.user_id,
+          company_id: companyId,
+          job_title: m.job_title,
+          department: m.department
+        }));
+        
+        await supabase.from('company_members').insert(membersToAdd);
+      }
+      
+      // Combine both lists
+      return [...membersData, ...profileMembers] as CompanyMemberWithProfile[];
     } catch (error) {
       console.error('Error fetching company members:', error);
       return [];

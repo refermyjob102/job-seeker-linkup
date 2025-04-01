@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Profile } from "@/types/database";
+import { companyService } from "@/services/companyService";
 
 interface EditProfileModalProps {
   open: boolean;
@@ -53,6 +53,7 @@ const EditProfileModal = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
+  const [previousCompany, setPreviousCompany] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (profile) {
@@ -76,6 +77,7 @@ const EditProfileModal = ({
         available_for_referrals: profile.available_for_referrals || false,
         open_to_work: profile.open_to_work || false,
       });
+      setPreviousCompany(profile.company);
     }
   }, [profile]);
 
@@ -102,6 +104,28 @@ const EditProfileModal = ({
           .eq('id', user.id);
           
         if (error) throw error;
+        
+        // Update company membership if company changed
+        if (formData.company !== previousCompany) {
+          // If company is set, add user to company_members
+          if (formData.company) {
+            // Check if user is already a member
+            const isMember = await companyService.isUserMemberOfCompany(user.id, formData.company);
+            
+            if (!isMember) {
+              // Add user as member with job title and department from profile
+              await companyService.addCompanyMember(
+                user.id,
+                formData.company,
+                formData.job_title || 'Member',
+                formData.department
+              );
+            }
+          }
+          
+          // Update previous company for next time
+          setPreviousCompany(formData.company);
+        }
         
         // Fetch the updated profile to ensure UI is in sync
         await fetchProfile(user.id);

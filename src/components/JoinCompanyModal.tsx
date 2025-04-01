@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   companyId: z.string({
@@ -95,6 +96,18 @@ const JoinCompanyModal = ({
       );
 
       if (result) {
+        // Update user's profile to reflect the company change
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            company: values.companyId,
+            job_title: values.jobTitle,
+            department: values.department
+          })
+          .eq('id', userId);
+          
+        if (profileError) throw profileError;
+        
         toast({
           title: "Success",
           description: "You have joined the company successfully.",
