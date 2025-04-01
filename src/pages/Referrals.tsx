@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,7 +31,7 @@ const Referrals = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fetch referrals from the database
+  // Inside the useEffect that fetches referrals:
   useEffect(() => {
     const fetchReferrals = async () => {
       if (!user) return;
@@ -49,38 +48,51 @@ const Referrals = () => {
               position,
               status,
               created_at,
-              companies:company_id(name),
-              referrers:referrer_id(
-                id,
-                profiles:id(
-                  first_name,
-                  last_name,
-                  avatar_url,
-                  job_title
-                )
-              )
+              companies:company_id(name)
             `)
             .eq('seeker_id', user.id);
             
           if (error) throw error;
           
-          if (data) {
+          // Now fetch referrer profiles in a separate query
+          if (data && data.length > 0) {
+            const referrerIds = data.map(item => item.referrer_id).filter(Boolean);
+            
+            let referrers = {};
+            if (referrerIds.length > 0) {
+              const { data: referrerData, error: referrerError } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name, avatar_url, job_title')
+                .in('id', referrerIds);
+                
+              if (!referrerError && referrerData) {
+                referrers = referrerData.reduce((acc, profile) => {
+                  acc[profile.id] = profile;
+                  return acc;
+                }, {});
+              }
+            }
+            
             // Transform data to match the SeekerReferral interface
             const formattedData: SeekerReferral[] = data.map(item => ({
               id: item.id,
               company: item.companies?.name || 'Unknown Company',
               position: item.position,
               referrer: {
-                id: item.referrers?.id || '',
-                name: `${item.referrers?.profiles?.first_name || ''} ${item.referrers?.profiles?.last_name || ''}`.trim() || 'Unknown',
-                avatar: item.referrers?.profiles?.avatar_url || '',
-                jobTitle: item.referrers?.profiles?.job_title || '',
+                id: item.referrer_id || '',
+                name: referrers[item.referrer_id] 
+                  ? `${referrers[item.referrer_id].first_name || ''} ${referrers[item.referrer_id].last_name || ''}`.trim() 
+                  : 'Unknown',
+                avatar: referrers[item.referrer_id]?.avatar_url || '',
+                jobTitle: referrers[item.referrer_id]?.job_title || '',
               },
               status: item.status as ReferralStatus,
               date: new Date(item.created_at).toISOString().split('T')[0],
             }));
             
             setReferrals(formattedData);
+          } else {
+            setReferrals([]);
           }
         } else {
           // Fetch outgoing referrals for referrers
@@ -92,35 +104,50 @@ const Referrals = () => {
               status,
               created_at,
               companies:company_id(name),
-              seekers:seeker_id(
-                id,
-                profiles:id(
-                  first_name,
-                  last_name,
-                  avatar_url
-                )
-              )
+              seeker_id
             `)
             .eq('referrer_id', user.id);
             
           if (error) throw error;
           
-          if (data) {
+          // Now fetch seeker profiles in a separate query
+          if (data && data.length > 0) {
+            const seekerIds = data.map(item => item.seeker_id).filter(Boolean);
+            
+            let seekers = {};
+            if (seekerIds.length > 0) {
+              const { data: seekerData, error: seekerError } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name, avatar_url')
+                .in('id', seekerIds);
+                
+              if (!seekerError && seekerData) {
+                seekers = seekerData.reduce((acc, profile) => {
+                  acc[profile.id] = profile;
+                  return acc;
+                }, {});
+              }
+            }
+            
             // Transform data to match the ReferrerReferral interface
             const formattedData: ReferrerReferral[] = data.map(item => ({
               id: item.id,
               company: item.companies?.name || 'Unknown Company',
               position: item.position,
               applicant: {
-                id: item.seekers?.id || '',
-                name: `${item.seekers?.profiles?.first_name || ''} ${item.seekers?.profiles?.last_name || ''}`.trim() || 'Unknown',
-                avatar: item.seekers?.profiles?.avatar_url || '',
+                id: item.seeker_id || '',
+                name: seekers[item.seeker_id] 
+                  ? `${seekers[item.seeker_id].first_name || ''} ${seekers[item.seeker_id].last_name || ''}`.trim() 
+                  : 'Unknown',
+                avatar: seekers[item.seeker_id]?.avatar_url || '',
               },
               status: item.status as ReferralStatus,
               date: new Date(item.created_at).toISOString().split('T')[0],
             }));
             
             setOutgoingReferrals(formattedData);
+          } else {
+            setOutgoingReferrals([]);
           }
         }
       } catch (error) {

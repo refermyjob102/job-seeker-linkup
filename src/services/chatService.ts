@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/database";
 
@@ -144,16 +143,7 @@ class ChatService {
         last_message_at,
         conversation_participants!inner(user_id),
         conversation_participants(
-          user_id,
-          profiles:user_id(
-            id,
-            user_id:id,
-            first_name,
-            last_name,
-            avatar_url,
-            job_title,
-            company
-          )
+          user_id
         )
       `)
       .contains('conversation_participants.user_id', [userId])
@@ -161,12 +151,33 @@ class ChatService {
 
     if (error) throw error;
 
+    // Get all participant IDs except the current user
+    const participantIds = data
+      .flatMap(conv => conv.conversation_participants)
+      .map(p => p.user_id)
+      .filter(id => id !== userId);
+
+    // Fetch all profiles for these participants in a single query
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, avatar_url, job_title, company')
+      .in('id', [...new Set(participantIds)]);
+
+    if (profilesError) throw profilesError;
+
+    // Create a map of profiles by ID for quick lookup
+    const profilesMap = (profilesData || []).reduce((acc, profile) => {
+      acc[profile.id] = profile;
+      return acc;
+    }, {});
+
     // Format the conversations data to match the Conversation interface
     const conversations = data.map(conv => {
       // Get all participants except the current user
       const participants = conv.conversation_participants
         .filter(p => p.user_id !== userId)
-        .map(p => p.profiles) as Profile[];
+        .map(p => profilesMap[p.user_id] || null)
+        .filter(Boolean);
 
       return {
         id: conv.id,

@@ -1,21 +1,20 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Notification {
   id: string;
   recipient_id: string;
-  sender_id: string;
+  sender_id: string | null;
   type: 'referral_request' | 'referral_update' | 'new_message' | 'system';
   content: string;
   is_read: boolean;
   created_at: string;
-  referral_id?: string;
-  conversation_id?: string;
+  referral_id?: string | null;
+  conversation_id?: string | null;
   sender?: {
     first_name?: string;
     last_name?: string;
     avatar_url?: string;
-  };
+  } | null;
 }
 
 export type NotificationFilter = 'all' | 'referral' | 'message' | 'system' | 'unread';
@@ -45,7 +44,8 @@ class NotificationService {
       
     if (error) throw error;
     
-    return data;
+    // We need to cast this to match our Notification type
+    return data as Notification;
   }
 
   /**
@@ -94,12 +94,7 @@ class NotificationService {
           is_read,
           created_at,
           referral_id,
-          conversation_id,
-          senders:profiles!sender_id(
-            first_name,
-            last_name,
-            avatar_url
-          )
+          conversation_id
         `)
         .eq('recipient_id', userId)
         .order('created_at', { ascending: false });
@@ -119,23 +114,43 @@ class NotificationService {
       
       if (error) throw error;
       
-      // Format the data to match the Notification interface
-      const formattedNotifications = data?.map(notif => ({
+      // Fetch sender profiles for notifications with a sender_id
+      const senderIds = data
+        .filter(n => n.sender_id)
+        .map(n => n.sender_id);
+      
+      let senderProfiles = {};
+      if (senderIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, avatar_url')
+          .in('id', senderIds);
+        
+        if (!profilesError && profilesData) {
+          senderProfiles = profilesData.reduce((acc, profile) => {
+            acc[profile.id] = profile;
+            return acc;
+          }, {});
+        }
+      }
+      
+      // Format the data to match the Notification interface with sender info
+      const formattedNotifications: Notification[] = data.map(notif => ({
         id: notif.id,
         recipient_id: notif.recipient_id,
         sender_id: notif.sender_id,
-        type: notif.type as any,
+        type: notif.type as Notification['type'],
         content: notif.content,
         is_read: notif.is_read,
         created_at: notif.created_at,
         referral_id: notif.referral_id,
         conversation_id: notif.conversation_id,
-        sender: notif.senders ? {
-          first_name: notif.senders.first_name,
-          last_name: notif.senders.last_name,
-          avatar_url: notif.senders.avatar_url
-        } : undefined
-      })) || [];
+        sender: notif.sender_id && senderProfiles[notif.sender_id] ? {
+          first_name: senderProfiles[notif.sender_id].first_name,
+          last_name: senderProfiles[notif.sender_id].last_name,
+          avatar_url: senderProfiles[notif.sender_id].avatar_url
+        } : null
+      }));
       
       return formattedNotifications;
     } catch (error) {

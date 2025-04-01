@@ -33,7 +33,7 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatSubscriptionRef = useRef<() => void>();
   const otherParticipant = currentConversation?.participants.find(
-    p => p.user_id !== user?.id
+    p => p.id !== user?.id
   );
 
   // Scroll to bottom of messages
@@ -152,7 +152,7 @@ const Chat = () => {
         if (currentConversation && newMessage.conversation_id !== currentConversation.id) {
           // Find the conversation to get the sender's name
           const conversation = conversations.find(c => c.id === newMessage.conversation_id);
-          const sender = conversation?.participants.find(p => p.user_id === newMessage.sender_id);
+          const sender = conversation?.participants.find(p => p.id === newMessage.sender_id);
           const senderName = sender ? `${sender.first_name || ''} ${sender.last_name || ''}`.trim() : 'Someone';
           
           toast({
@@ -212,7 +212,7 @@ const Chat = () => {
       const newMessage = await chatService.sendMessage(
         currentConversation.id,
         user.id,
-        otherParticipant.user_id,
+        otherParticipant.id,
         trimmedMessage
       );
       

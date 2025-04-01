@@ -160,6 +160,8 @@ const JobDetails = () => {
     // Record the application in the database (if user is logged in)
     if (user) {
       try {
+        // Comment out this code since job_applications table doesn't exist yet
+        /*
         supabase.from('job_applications').insert({
           user_id: user.id,
           job_id: job.id,
@@ -167,6 +169,14 @@ const JobDetails = () => {
           application_method: 'direct'
         }).then(({ error }) => {
           if (error) console.error('Error recording application:', error);
+        });
+        */
+        
+        // Just log for now until we create the job_applications table
+        console.log('Application started:', {
+          user_id: user.id,
+          job_id: job.id,
+          applied_at: new Date().toISOString()
         });
       } catch (error) {
         console.error('Failed to record application:', error);
