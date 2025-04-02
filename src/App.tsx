@@ -1,6 +1,7 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
@@ -12,6 +13,9 @@ import Referrals from './pages/Referrals';
 import Members from './pages/Members';
 import MemberDetails from './pages/MemberDetails';
 import { companyService } from "@/services/companyService";
+import Dashboard from './pages/Dashboard';
+import DashboardLayout from './layouts/DashboardLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   const AuthRoute = ({ children }: { children: React.ReactNode }) => {
@@ -39,15 +43,25 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/app/profile" element={<AuthRoute><Profile /></AuthRoute>} />
-        <Route path="/app/companies" element={<AuthRoute><Companies /></AuthRoute>} />
-        <Route path="/app/companies/:id" element={<AuthRoute><CompanyMembers /></AuthRoute>} />
-        <Route path="/app/jobs" element={<AuthRoute><Jobs /></AuthRoute>} />
-        <Route path="/app/jobs/:id" element={<AuthRoute><JobDetails /></AuthRoute>} />
-        <Route path="/app/referrals" element={<AuthRoute><Referrals /></AuthRoute>} />
-        <Route path="/app/members" element={<AuthRoute><Members /></AuthRoute>} />
-        <Route path="/app/members/:id" element={<AuthRoute><MemberDetails /></AuthRoute>} />
-        <Route path="/" element={<Navigate to="/app/profile" />} />
+        
+        {/* Dashboard Layout with Protected Routes */}
+        <Route path="/app" element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Dashboard />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="companies" element={<Companies />} />
+          <Route path="companies/:id" element={<CompanyMembers />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="jobs/:id" element={<JobDetails />} />
+          <Route path="referrals" element={<Referrals />} />
+          <Route path="members" element={<Members />} />
+          <Route path="members/:id" element={<MemberDetails />} />
+        </Route>
+        
+        <Route path="/" element={<Navigate to="/app" />} />
       </Routes>
     </Router>
   );
