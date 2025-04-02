@@ -89,7 +89,8 @@ const JoinCompanyModal = ({
         return;
       }
       
-      // Add user as a member
+      // Step 1: Add user as a member in company_members table
+      console.log("Adding user to company_members table");
       const result = await companyService.addCompanyMember(
         userId,
         values.companyId,
@@ -98,7 +99,8 @@ const JoinCompanyModal = ({
       );
 
       if (result) {
-        // Update user's profile to reflect the company change
+        // Step 2: Update user's profile to reflect the company change
+        console.log("Updating user profile with company information");
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
@@ -108,7 +110,13 @@ const JoinCompanyModal = ({
           })
           .eq('id', userId);
           
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+          throw profileError;
+        }
+        
+        // Run a sync to ensure company_members and profiles are in sync
+        await companyService.syncProfilesWithCompanyMembers();
         
         toast({
           title: "Success",

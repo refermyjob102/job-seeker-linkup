@@ -180,6 +180,31 @@ class CompanyService {
         .eq('company_id', companyId);
 
       if (error) throw error;
+      
+      // If not found in company_members, check if user's profile has this company
+      if (!count || count === 0) {
+        console.log('User not found in company_members, checking profiles...');
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .eq('id', userId)
+          .eq('company', companyId);
+          
+        if (profileError) throw profileError;
+        
+        if (profileData && count) {
+          // Add this user to company_members for future reference
+          console.log('User found in profiles with this company, adding to company_members');
+          await this.addCompanyMember(
+            userId,
+            companyId,
+            profileData.job_title || 'Member',
+            profileData.department
+          );
+          return true;
+        }
+      }
+      
       return count ? count > 0 : false;
     } catch (error) {
       console.error('Error checking company membership:', error);
@@ -223,6 +248,60 @@ class CompanyService {
     } catch (error) {
       console.error('Error fetching user companies:', error);
       return [];
+    }
+  }
+  
+  /**
+   * Sync user profiles with company_members table
+   * This ensures all users with company in their profiles are also in company_members
+   */
+  async syncProfilesWithCompanyMembers(): Promise<void> {
+    try {
+      console.log('Syncing profiles with company_members table');
+      
+      // Get all profiles with company set
+      const { data: profilesWithCompany, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .not('company', 'is', null);
+        
+      if (profilesError) {
+        console.error('Error fetching profiles with company:', profilesError);
+        return;
+      }
+      
+      console.log(`Found ${profilesWithCompany.length} profiles with company set`);
+      
+      // For each profile, check if they're in company_members and add if not
+      for (const profile of profilesWithCompany) {
+        if (!profile.company) continue;
+        
+        const { data, error, count } = await supabase
+          .from('company_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', profile.id)
+          .eq('company_id', profile.company);
+          
+        if (error) {
+          console.error(`Error checking company membership for user ${profile.id}:`, error);
+          continue;
+        }
+        
+        // If not found in company_members, add them
+        if (!count || count === 0) {
+          console.log(`Adding user ${profile.id} to company ${profile.company}`);
+          await this.addCompanyMember(
+            profile.id,
+            profile.company,
+            profile.job_title || 'Member',
+            profile.department
+          );
+        }
+      }
+      
+      console.log('Sync completed');
+    } catch (error) {
+      console.error('Error syncing profiles with company_members:', error);
     }
   }
 }

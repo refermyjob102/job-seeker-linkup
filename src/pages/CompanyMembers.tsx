@@ -62,6 +62,10 @@ const CompanyMembers = () => {
       
       try {
         console.log("Fetching company data for ID:", id);
+        
+        // First run a sync to ensure all profile data is in sync with company_members
+        await companyService.syncProfilesWithCompanyMembers();
+        
         // Get company data
         if (id) {
           // First try to get from Supabase
@@ -75,6 +79,11 @@ const CompanyMembers = () => {
             console.log("Fetching company members...");
             const companyMembers = await companyService.getCompanyMembers(id);
             console.log("Company members retrieved:", companyMembers);
+            
+            if (companyMembers.length === 0) {
+              console.warn("No company members found! This may be an error.");
+            }
+            
             setEmployees(companyMembers);
             setFilteredEmployees(companyMembers);
           } else {
