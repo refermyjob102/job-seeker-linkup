@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ const formSchema = z.object({
   companyId: z.string({
     required_error: "Please select a company",
   }),
+  customCompany: z.string().optional(),
   jobTitle: z.string().min(2, {
     message: "Job title must be at least 2 characters.",
   }),
@@ -38,12 +40,14 @@ const JoinCompanyModal = ({
 }: JoinCompanyModalProps) => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCustomCompany, setShowCustomCompany] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       companyId: "",
+      customCompany: "",
       jobTitle: "",
       department: "",
     },
@@ -67,16 +71,54 @@ const JoinCompanyModal = ({
     if (open) {
       fetchCompanies();
       form.reset();
+      setShowCustomCompany(false);
     }
   }, [open, toast, form]);
+
+  const handleCompanyChange = (value: string) => {
+    form.setValue("companyId", value);
+    setShowCustomCompany(value === "others");
+    if (value !== "others") {
+      form.setValue("customCompany", "");
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
       console.log("Joining company with values:", values);
       
+      let companyId = values.companyId;
+      
+      // Handle custom company name
+      if (values.companyId === "others" && values.customCompany) {
+        // Check if company with this name already exists
+        const { data: existingCompany } = await supabase
+          .from('companies')
+          .select('id')
+          .ilike('name', values.customCompany)
+          .maybeSingle();
+        
+        if (existingCompany) {
+          companyId = existingCompany.id;
+        } else {
+          // Create new company
+          const { data: newCompany, error: createError } = await supabase
+            .from('companies')
+            .insert({ name: values.customCompany })
+            .select('id')
+            .single();
+            
+          if (createError) {
+            throw createError;
+          }
+          
+          companyId = newCompany.id;
+        }
+      }
+      
       // Check if user is already a member of this company
-      const isMember = await companyService.isUserMemberOfCompany(userId, values.companyId);
+      const isMember = await companyService.isUserMemberOfCompany(userId, companyId);
       
       if (isMember) {
         toast({
@@ -92,7 +134,7 @@ const JoinCompanyModal = ({
       console.log("Adding user to company_members table");
       const result = await companyService.addCompanyMember(
         userId,
-        values.companyId,
+        companyId,
         values.jobTitle,
         values.department
       );
@@ -103,7 +145,7 @@ const JoinCompanyModal = ({
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
-            company: values.companyId,
+            company: companyId,
             job_title: values.jobTitle,
             department: values.department
           })
@@ -158,7 +200,7 @@ const JoinCompanyModal = ({
                 <FormItem>
                   <FormLabel>Company</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => handleCompanyChange(value)}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -172,12 +214,29 @@ const JoinCompanyModal = ({
                           {company.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value="others">Others</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            {showCustomCompany && (
+              <FormField
+                control={form.control}
+                name="customCompany"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter company name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <FormField
               control={form.control}

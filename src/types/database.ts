@@ -44,3 +44,8 @@ export interface CompanyMember {
   department?: string;
   joined_at: string;
 }
+
+// This extends the CompanyMember to include the profile data
+export interface CompanyMemberWithProfile extends CompanyMember {
+  profiles: Profile;
+}

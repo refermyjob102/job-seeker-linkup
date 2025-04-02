@@ -1,10 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Company, CompanyMember, Profile } from "@/types/database";
-
-interface CompanyMemberWithProfile extends CompanyMember {
-  profiles: Profile;
-}
+import { Company, CompanyMember, Profile, CompanyMemberWithProfile } from "@/types/database";
 
 class CompanyService {
   /**
@@ -191,6 +186,17 @@ class CompanyService {
       }
       
       console.log('Company member added successfully:', data);
+      
+      // Update profile with correct company ID to maintain consistency
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ company: companyId })
+        .eq('id', userId);
+        
+      if (profileUpdateError) {
+        console.error('Error updating profile with company ID:', profileUpdateError);
+      }
+      
       return data as CompanyMember;
     } catch (error) {
       console.error('Error adding company member:', error);
@@ -240,7 +246,8 @@ class CompanyService {
       if (profileData && profileData.company) {
         // Check if company matches by ID or name (case insensitive)
         if (profileData.company === companyId || 
-            profileData.company.toLowerCase() === companyName) {
+            (typeof profileData.company === 'string' && 
+             profileData.company.toLowerCase() === companyName)) {
           
           console.log('User found in profiles with this company, adding to company_members');
           
@@ -333,8 +340,11 @@ class CompanyService {
       
       // Create a map of lowercase company names to company IDs
       const companyNameMap = new Map<string, string>();
+      const companyIdMap = new Map<string, string>();
+      
       for (const company of allCompanies) {
         companyNameMap.set(company.name.toLowerCase(), company.id);
+        companyIdMap.set(company.id, company.name);
       }
       
       // For each profile, check if they're in company_members and add if not
@@ -343,11 +353,24 @@ class CompanyService {
           if (!profile.company) continue;
           
           let companyId = profile.company;
+          let isValidCompanyId = false;
           
-          // If the company value looks like a name rather than an ID,
-          // try to find the matching company ID
-          if (!companyId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            const matchingCompanyId = companyNameMap.get(profile.company.toLowerCase());
+          // Check if the company value is a valid UUID (likely a company ID)
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          isValidCompanyId = uuidPattern.test(profile.company);
+          
+          // If it's a valid UUID, check if it exists in our companies
+          if (isValidCompanyId && !companyIdMap.has(profile.company)) {
+            // It's a UUID but not a known company ID, try to match by name
+            isValidCompanyId = false;
+          }
+          
+          // If the company value is not a valid company ID,
+          // try to find the matching company ID by name
+          if (!isValidCompanyId) {
+            const companyNameLower = profile.company.toLowerCase();
+            const matchingCompanyId = companyNameMap.get(companyNameLower);
+            
             if (matchingCompanyId) {
               companyId = matchingCompanyId;
               
@@ -360,10 +383,40 @@ class CompanyService {
                 
               if (updateError) {
                 console.error(`Error updating profile company ID:`, updateError);
+                continue;
               }
             } else {
-              console.log(`No matching company found for name: "${profile.company}"`);
-              continue; // Skip this profile if no matching company is found
+              // No matching company found, create a new one
+              console.log(`Creating new company with name: "${profile.company}"`);
+              
+              const { data: newCompany, error: createError } = await supabase
+                .from('companies')
+                .insert({ name: profile.company })
+                .select('id')
+                .single();
+                
+              if (createError) {
+                console.error(`Error creating company:`, createError);
+                continue;
+              }
+              
+              companyId = newCompany.id;
+              
+              // Update the profile with the new company ID
+              console.log(`Updating profile ${profile.id} company to new company ID: "${companyId}"`);
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ company: companyId })
+                .eq('id', profile.id);
+                
+              if (updateError) {
+                console.error(`Error updating profile with new company ID:`, updateError);
+                continue;
+              }
+              
+              // Add to our maps
+              companyNameMap.set(profile.company.toLowerCase(), companyId);
+              companyIdMap.set(companyId, profile.company);
             }
           }
           

@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Update profile with company and job_title if provided
         if (userData.company || userData.jobTitle) {
-          console.log('Updating profile with company and job title');
+          console.log('Updating profile with company and job title:', userData.company, userData.jobTitle);
           const { error: updateError } = await supabase
             .from('profiles')
             .update({
@@ -153,12 +153,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Add user to company_members if company is provided
           if (userData.company && userData.role === 'referrer') {
-            console.log('Adding user to company_members');
-            await companyService.addCompanyMember(
-              authData.user.id,
-              userData.company,
-              userData.jobTitle || 'Member'
-            );
+            console.log('Adding user to company_members with company:', userData.company);
+            
+            // First check if the company exists by ID
+            const isCompanyId = await companyService.getCompanyById(userData.company);
+            
+            if (isCompanyId) {
+              // If it's a valid company ID, add directly
+              await companyService.addCompanyMember(
+                authData.user.id,
+                userData.company,
+                userData.jobTitle || 'Member'
+              );
+            } else {
+              // If not an ID, it might be a company name (from custom input)
+              // Check if company with this name exists
+              console.log('Checking for company by name:', userData.company);
+              const { data: companies } = await supabase
+                .from('companies')
+                .select('id, name')
+                .ilike('name', userData.company);
+                
+              if (companies && companies.length > 0) {
+                // Use existing company
+                console.log('Found existing company by name:', companies[0]);
+                await companyService.addCompanyMember(
+                  authData.user.id,
+                  companies[0].id,
+                  userData.jobTitle || 'Member'
+                );
+                
+                // Update profile with correct company ID
+                await supabase
+                  .from('profiles')
+                  .update({ company: companies[0].id })
+                  .eq('id', authData.user.id);
+              } else {
+                // Create new company
+                console.log('Creating new company with name:', userData.company);
+                const { data: newCompany, error: companyError } = await supabase
+                  .from('companies')
+                  .insert({
+                    name: userData.company
+                  })
+                  .select('id')
+                  .single();
+                  
+                if (companyError) {
+                  console.error('Error creating company:', companyError);
+                } else if (newCompany) {
+                  console.log('New company created with ID:', newCompany.id);
+                  
+                  // Add user to new company
+                  await companyService.addCompanyMember(
+                    authData.user.id,
+                    newCompany.id,
+                    userData.jobTitle || 'Member'
+                  );
+                  
+                  // Update profile with correct company ID
+                  await supabase
+                    .from('profiles')
+                    .update({ company: newCompany.id })
+                    .eq('id', authData.user.id);
+                }
+              }
+            }
           }
         }
         
