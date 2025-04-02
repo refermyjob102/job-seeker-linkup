@@ -27,19 +27,9 @@ import { getCompanyById } from "@/data/topCompanies";
 import ViewOpenPositionsModal from "@/components/ViewOpenPositionsModal";
 import { Separator } from "@/components/ui/separator";
 import { companyService } from "@/services/companyService";
-import { Company, Profile } from "@/types/database";
+import { Company, CompanyMemberWithProfile } from "@/types/database";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface CompanyMemberWithProfile {
-  id: string;
-  company_id: string;
-  user_id: string;
-  job_title: string;
-  department?: string;
-  joined_at: string;
-  profiles: Profile;
-}
 
 const CompanyMembers = () => {
   const { id } = useParams<{ id: string }>();
@@ -77,7 +67,7 @@ const CompanyMembers = () => {
             // Get company members
             console.log("Fetching company members...");
             const companyMembers = await companyService.getCompanyMembers(id);
-            console.log("Company members retrieved:", companyMembers.length);
+            console.log("Company members retrieved:", companyMembers);
             
             setEmployees(companyMembers);
             setFilteredEmployees(companyMembers);
@@ -172,7 +162,6 @@ const CompanyMembers = () => {
 
   const referrersCount = filteredEmployees.filter(emp => emp.profiles.available_for_referrals).length;
 
-  // Enhanced company details for LinkedIn-like experience
   const companyDetails = {
     founded: "2015",
     industry: company.description || "Technology",
@@ -200,7 +189,7 @@ const CompanyMembers = () => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
               <div className="bg-muted flex items-center justify-center p-6 rounded-md h-24 w-24">
-                {company.logo_url ? (
+                {company?.logo_url ? (
                   <img src={company.logo_url} alt={company.name} className="h-full w-full object-contain" />
                 ) : (
                   <Building className="h-12 w-12 text-muted-foreground" />
@@ -208,7 +197,9 @@ const CompanyMembers = () => {
               </div>
               
               <div className="flex-1 text-center md:text-left">
-                <h1 className="text-2xl font-bold mb-2">{company.name}</h1>
+                <h1 className="text-2xl font-bold mb-2">{company?.name}</h1>
+                
+                
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
                   <Badge variant="outline">{companyDetails.industry}</Badge>
                   <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
@@ -235,7 +226,7 @@ const CompanyMembers = () => {
                     <span className="text-muted-foreground text-sm">Open Positions</span>
                     <span className="font-medium flex items-center">
                       <Briefcase className="h-4 w-4 mr-1 text-muted-foreground" />
-                      {parseInt(company.id) * 3 || 5} openings
+                      {company?.id ? parseInt(company.id) * 3 : 5} openings
                     </span>
                   </div>
                 </div>
@@ -245,7 +236,7 @@ const CompanyMembers = () => {
                     View Open Positions
                   </Button>
                   <Button variant="outline" asChild>
-                    <a href={company.website || `https://www.google.com/search?q=${encodeURIComponent(company.name)}`} target="_blank" rel="noopener noreferrer">
+                    <a href={company?.website || `https://www.google.com/search?q=${encodeURIComponent(company?.name || '')}`} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Visit Website
                     </a>
@@ -383,8 +374,8 @@ const CompanyMembers = () => {
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={employee.profiles.avatar_url || ''} alt={`${employee.profiles.first_name} ${employee.profiles.last_name}`} />
-                        <AvatarFallback>{employee.profiles.first_name.charAt(0)}{employee.profiles.last_name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={employee.profiles.avatar_url || ''} alt={`${employee.profiles.first_name || ''} ${employee.profiles.last_name || ''}`} />
+                        <AvatarFallback>{employee.profiles.first_name ? employee.profiles.first_name.charAt(0) : ''}{employee.profiles.last_name ? employee.profiles.last_name.charAt(0) : ''}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium truncate">{employee.profiles.first_name} {employee.profiles.last_name}</h3>
@@ -442,7 +433,7 @@ const CompanyMembers = () => {
         open={isOpenPositionsModalOpen}
         onClose={() => setIsOpenPositionsModalOpen(false)}
         companyId={id || ""}
-        companyName={company.name}
+        companyName={company?.name || ""}
       />
     </div>
   );
