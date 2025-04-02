@@ -184,7 +184,7 @@ class CompanyService {
       // If not found in company_members, check if user's profile has this company
       if (!count || count === 0) {
         console.log('User not found in company_members, checking profiles...');
-        const { data: profileData, error: profileError } = await supabase
+        const { data: profileData, error: profileError, count: profileCount } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
           .eq('id', userId)
@@ -192,16 +192,28 @@ class CompanyService {
           
         if (profileError) throw profileError;
         
-        if (profileData && count) {
+        if (profileCount && profileCount > 0) {
           // Add this user to company_members for future reference
           console.log('User found in profiles with this company, adding to company_members');
-          await this.addCompanyMember(
-            userId,
-            companyId,
-            profileData.job_title || 'Member',
-            profileData.department
-          );
-          return true;
+          
+          // Get the full profile to access job_title and department
+          const { data: fullProfile, error: fullProfileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          if (fullProfileError) throw fullProfileError;
+          
+          if (fullProfile) {
+            await this.addCompanyMember(
+              userId,
+              companyId,
+              fullProfile.job_title || 'Member',
+              fullProfile.department
+            );
+            return true;
+          }
         }
       }
       
@@ -270,32 +282,34 @@ class CompanyService {
         return;
       }
       
-      console.log(`Found ${profilesWithCompany.length} profiles with company set`);
+      console.log(`Found ${profilesWithCompany?.length || 0} profiles with company set`);
       
       // For each profile, check if they're in company_members and add if not
-      for (const profile of profilesWithCompany) {
-        if (!profile.company) continue;
-        
-        const { data, error, count } = await supabase
-          .from('company_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
-          .eq('company_id', profile.company);
+      if (profilesWithCompany) {
+        for (const profile of profilesWithCompany) {
+          if (!profile.company) continue;
           
-        if (error) {
-          console.error(`Error checking company membership for user ${profile.id}:`, error);
-          continue;
-        }
-        
-        // If not found in company_members, add them
-        if (!count || count === 0) {
-          console.log(`Adding user ${profile.id} to company ${profile.company}`);
-          await this.addCompanyMember(
-            profile.id,
-            profile.company,
-            profile.job_title || 'Member',
-            profile.department
-          );
+          const { data, error, count } = await supabase
+            .from('company_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id)
+            .eq('company_id', profile.company);
+            
+          if (error) {
+            console.error(`Error checking company membership for user ${profile.id}:`, error);
+            continue;
+          }
+          
+          // If not found in company_members, add them
+          if (!count || count === 0) {
+            console.log(`Adding user ${profile.id} to company ${profile.company}`);
+            await this.addCompanyMember(
+              profile.id,
+              profile.company,
+              profile.job_title || 'Member',
+              profile.department
+            );
+          }
         }
       }
       
