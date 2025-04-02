@@ -74,6 +74,8 @@ const JoinCompanyModal = ({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
+      console.log("Joining company with values:", values);
+      
       // Check if user is already a member of this company
       const isMember = await companyService.isUserMemberOfCompany(userId, values.companyId);
       

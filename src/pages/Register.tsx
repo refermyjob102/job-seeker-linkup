@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -18,6 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { topCompanies } from "@/data/topCompanies";
 
 const Register = () => {
   const location = useLocation();
@@ -38,6 +41,12 @@ const Register = () => {
   
   const isReferrer = role === "referrer";
 
+  // Prepare company options from topCompanies
+  const companyOptions = topCompanies.map((company) => ({
+    label: company.name,
+    value: company.id,
+  }));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -51,6 +60,7 @@ const Register = () => {
     }
     
     try {
+      console.log('Submitting registration with company:', company);
       await register({
         first_name: firstName,
         last_name: lastName,
@@ -167,13 +177,22 @@ const Register = () => {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="company">Company</Label>
-                      <Input 
-                        id="company" 
-                        placeholder="Google, Meta, etc." 
-                        required={isReferrer} 
+                      <Select 
                         value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                      />
+                        onValueChange={(value) => setCompany(value)}
+                        required={isReferrer}
+                      >
+                        <SelectTrigger id="company" className="w-full">
+                          <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companyOptions.map((companyOption) => (
+                            <SelectItem key={companyOption.value} value={companyOption.value}>
+                              {companyOption.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     <div className="space-y-2">

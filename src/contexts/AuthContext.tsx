@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
 import { useToast } from '@/components/ui/use-toast';
+import { companyService } from '@/services/companyService';
 
 export type UserRole = 'seeker' | 'referrer';
 
@@ -63,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user ID:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -72,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
       // Ensure the role is cast to the correct type
       if (data && (data.role === 'seeker' || data.role === 'referrer')) {
+        console.log('Profile data fetched:', data);
         setUser(data as Profile);
       } else {
         console.error('Invalid user role:', data?.role);
@@ -114,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      console.log('Registering user with data:', userData);
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password,
@@ -129,7 +133,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authError) throw authError;
 
       if (authData.user) {
-        // The trigger will create the profile automatically
+        // Wait a bit for the trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Update profile with company and job_title if provided
+        if (userData.company || userData.jobTitle) {
+          console.log('Updating profile with company and job title');
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              company: userData.company,
+              job_title: userData.jobTitle
+            })
+            .eq('id', authData.user.id);
+            
+          if (updateError) {
+            console.error('Error updating profile with company:', updateError);
+          }
+          
+          // Add user to company_members if company is provided
+          if (userData.company && userData.role === 'referrer') {
+            console.log('Adding user to company_members');
+            await companyService.addCompanyMember(
+              authData.user.id,
+              userData.company,
+              userData.jobTitle || 'Member'
+            );
+          }
+        }
+        
+        // Fetch updated profile
         await fetchProfile(authData.user.id);
         
         // Set as new user to trigger profile completion prompt

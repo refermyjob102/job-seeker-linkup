@@ -12,6 +12,7 @@ class CompanyService {
    */
   async getCompanyById(id: string): Promise<Company | null> {
     try {
+      console.log('Fetching company with ID:', id);
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -19,6 +20,7 @@ class CompanyService {
         .single();
 
       if (error) throw error;
+      console.log('Company data:', data);
       return data as Company;
     } catch (error) {
       console.error('Error fetching company:', error);
@@ -124,6 +126,24 @@ class CompanyService {
     department?: string
   ): Promise<CompanyMember | null> {
     try {
+      console.log(`Adding user ${userId} to company ${companyId}`);
+      
+      // Check if the user is already a member
+      const isAlreadyMember = await this.isUserMemberOfCompany(userId, companyId);
+      
+      if (isAlreadyMember) {
+        console.log('User is already a member of this company');
+        const { data: existingMember } = await supabase
+          .from('company_members')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('company_id', companyId)
+          .single();
+          
+        return existingMember as CompanyMember;
+      }
+      
+      // Insert new member
       const { data, error } = await supabase
         .from('company_members')
         .insert({
@@ -135,7 +155,12 @@ class CompanyService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting company member:', error);
+        throw error;
+      }
+      
+      console.log('Company member added successfully:', data);
       return data as CompanyMember;
     } catch (error) {
       console.error('Error adding company member:', error);
