@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,11 +77,7 @@ const CompanyMembers = () => {
             // Get company members
             console.log("Fetching company members...");
             const companyMembers = await companyService.getCompanyMembers(id);
-            console.log("Company members retrieved:", companyMembers);
-            
-            if (companyMembers.length === 0) {
-              console.warn("No company members found! This may be an error.");
-            }
+            console.log("Company members retrieved:", companyMembers.length);
             
             setEmployees(companyMembers);
             setFilteredEmployees(companyMembers);
@@ -127,8 +122,8 @@ const CompanyMembers = () => {
     // Apply search term
     if (searchTerm) {
       filtered = filtered.filter(emp => 
-        emp.profiles.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.profiles.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (emp.profiles.first_name && emp.profiles.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (emp.profiles.last_name && emp.profiles.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         emp.job_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (emp.department && emp.department.toLowerCase().includes(searchTerm.toLowerCase()))
       );

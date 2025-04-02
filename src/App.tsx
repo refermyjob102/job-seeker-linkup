@@ -18,10 +18,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
-  const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-    const { user } = useAuth();
-    return user ? children : <Navigate to="/login" />;
-  };
+  const { user } = useAuth();
 
   // Add this useEffect to sync company data on app initialization
   useEffect(() => {
@@ -35,8 +32,10 @@ function App() {
       }
     };
     
-    syncCompanyData();
-  }, []);
+    if (user) {
+      syncCompanyData();
+    }
+  }, [user]);
 
   return (
     <Router>

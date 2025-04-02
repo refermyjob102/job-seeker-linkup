@@ -25,3 +25,22 @@ export interface Profile {
   years_experience?: string;
   open_to_work?: boolean;
 }
+
+export interface Company {
+  id: string;
+  name: string;
+  logo_url?: string;
+  location?: string;
+  website?: string;
+  description?: string;
+  created_at?: string;
+}
+
+export interface CompanyMember {
+  id: string;
+  user_id: string;
+  company_id: string;
+  job_title: string;
+  department?: string;
+  joined_at: string;
+}
