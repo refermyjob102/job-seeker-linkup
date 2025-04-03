@@ -204,48 +204,38 @@ class CompanyService {
       
       console.log(`Found ${profilesWithCompany?.length || 0} profiles with company set`);
       
-      // Get all companies for mapping
-      const { data: allCompanies, error: companiesError } = await supabase
-        .from('companies')
-        .select('id, name');
-        
-      if (companiesError) {
-        console.error('Error fetching companies for matching:', companiesError);
-        return;
-      }
-      
-      // Create a map of company IDs to names
-      const companyIdMap = new Map<string, string>();
-      
-      for (const company of allCompanies) {
-        companyIdMap.set(company.id, company.name);
-      }
-      
       // For each profile, ensure there's a corresponding entry in company_members
-      if (profilesWithCompany) {
+      if (profilesWithCompany && profilesWithCompany.length > 0) {
         for (const profile of profilesWithCompany) {
           if (!profile.company) continue;
           
           let companyId = profile.company;
           
-          // Check if the company value is a valid UUID (likely a company ID)
-          const isValidCompanyId = companyIdMap.has(profile.company);
+          // Check if company exists
+          const companyExists = await this.getCompanyById(companyId);
           
-          if (!isValidCompanyId) {
-            console.log(`Invalid company ID ${profile.company} for user ${profile.id}, attempting to find or create company`);
+          if (!companyExists) {
+            console.log(`Company ${companyId} does not exist, checking if it's a company name`);
             
             // Try to find the company by name
             const { data: existingCompany } = await supabase
               .from('companies')
               .select('id')
-              .ilike('name', profile.company)
+              .ilike('name', companyId)
               .maybeSingle();
               
             if (existingCompany) {
               companyId = existingCompany.id;
               console.log(`Found existing company with ID: ${companyId} for name: ${profile.company}`);
+              
+              // Update profile with correct company ID
+              await supabase
+                .from('profiles')
+                .update({ company: companyId })
+                .eq('id', profile.id);
             } else {
               // Create new company
+              console.log(`Creating new company with name: ${profile.company}`);
               const { data: newCompany, error: createError } = await supabase
                 .from('companies')
                 .insert({ name: profile.company })
@@ -259,29 +249,20 @@ class CompanyService {
               
               companyId = newCompany.id;
               console.log(`Created new company with ID: ${companyId} for name: ${profile.company}`);
-            }
-            
-            // Update the profile with the correct company ID
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ company: companyId })
-              .eq('id', profile.id);
               
-            if (updateError) {
-              console.error(`Error updating profile with company ID:`, updateError);
-              continue;
+              // Update profile with correct company ID
+              await supabase
+                .from('profiles')
+                .update({ company: companyId })
+                .eq('id', profile.id);
             }
           }
           
           // Now check if there's a company_members entry
-          const { count } = await supabase
-            .from('company_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', profile.id)
-            .eq('company_id', companyId);
+          const isAlreadyMember = await this.isUserMemberOfCompany(profile.id, companyId);
             
           // If not found in company_members, add them
-          if (!count || count === 0) {
+          if (!isAlreadyMember) {
             console.log(`Adding user ${profile.id} to company ${companyId}`);
             await this.addCompanyMember(
               profile.id,
@@ -296,6 +277,74 @@ class CompanyService {
       console.log('Sync completed');
     } catch (error) {
       console.error('Error syncing profiles with company_members:', error);
+    }
+  }
+
+  /**
+   * Create a new company
+   */
+  async createCompany(name: string, description?: string, location?: string, website?: string): Promise<Company | null> {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .insert({
+          name,
+          description,
+          location,
+          website
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Company;
+    } catch (error) {
+      console.error('Error creating company:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find or create a company by name
+   * This is useful when registering users who specify a company name
+   */
+  async findOrCreateCompanyByName(companyName: string): Promise<string> {
+    try {
+      if (!companyName.trim()) {
+        throw new Error('Company name cannot be empty');
+      }
+      
+      // First check if company with this name already exists
+      const { data: existingCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .ilike('name', companyName.trim())
+        .maybeSingle();
+        
+      if (existingCompany) {
+        console.log('Found existing company:', existingCompany.id);
+        return existingCompany.id;
+      }
+      
+      // Create new company if not found
+      console.log('Creating new company:', companyName);
+      const { data: newCompany, error } = await supabase
+        .from('companies')
+        .insert({
+          name: companyName.trim()
+        })
+        .select('id')
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      console.log('Created new company:', newCompany.id);
+      return newCompany.id;
+    } catch (error) {
+      console.error('Error finding/creating company:', error);
+      throw error;
     }
   }
 }

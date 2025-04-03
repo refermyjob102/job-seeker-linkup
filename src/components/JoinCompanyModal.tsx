@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -92,28 +93,12 @@ const JoinCompanyModal = ({
       
       // Handle custom company name
       if (values.companyId === "others" && values.customCompany) {
-        // Check if company with this name already exists
-        const { data: existingCompany } = await supabase
-          .from('companies')
-          .select('id')
-          .ilike('name', values.customCompany)
-          .maybeSingle();
-        
-        if (existingCompany) {
-          companyId = existingCompany.id;
-        } else {
-          // Create new company
-          const { data: newCompany, error: createError } = await supabase
-            .from('companies')
-            .insert({ name: values.customCompany })
-            .select('id')
-            .single();
-            
-          if (createError) {
-            throw createError;
-          }
-          
-          companyId = newCompany.id;
+        try {
+          // Find or create company by name
+          companyId = await companyService.findOrCreateCompanyByName(values.customCompany);
+        } catch (error) {
+          console.error("Error finding/creating company:", error);
+          throw new Error("Failed to create company. Please try again.");
         }
       }
       
@@ -155,6 +140,9 @@ const JoinCompanyModal = ({
           console.error("Error updating profile:", profileError);
           throw profileError;
         }
+        
+        // Force sync company memberships
+        await companyService.syncProfilesWithCompanyMembers();
         
         toast({
           title: "Success",

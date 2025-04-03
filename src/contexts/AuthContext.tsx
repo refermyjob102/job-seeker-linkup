@@ -72,12 +72,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) throw error;
+      
       // Ensure the role is cast to the correct type
-      if (data && (data.role === 'seeker' || data.role === 'referrer')) {
-        console.log('Profile data fetched:', data);
-        setUser(data as Profile);
+      if (data) {
+        // Convert role to expected type
+        const typedProfile = {
+          ...data,
+          role: (data.role === 'seeker' || data.role === 'referrer') 
+            ? data.role as 'seeker' | 'referrer' 
+            : 'seeker' // Default fallback if role is invalid
+        } as Profile;
+        
+        console.log('Profile data fetched:', typedProfile);
+        setUser(typedProfile);
       } else {
-        console.error('Invalid user role:', data?.role);
+        console.error('No profile data found');
         setUser(null);
       }
     } catch (error) {
@@ -136,13 +145,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Wait a bit for the trigger to create the profile
         await new Promise(resolve => setTimeout(resolve, 1000));
         
+        let companyId: string | undefined = undefined;
+        
+        // Process company if provided
+        if (userData.company && userData.company.trim() !== '') {
+          try {
+            console.log('Processing company:', userData.company);
+            
+            // Check if company is a UUID (existing company)
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (uuidRegex.test(userData.company)) {
+              // If it's a valid UUID format, try to get the company
+              const company = await companyService.getCompanyById(userData.company);
+              if (company) {
+                companyId = userData.company;
+                console.log('Using existing company by ID:', companyId);
+              } else {
+                // If company not found by ID, treat as a name
+                companyId = await companyService.findOrCreateCompanyByName(userData.company);
+                console.log('Created/found company by name:', companyId);
+              }
+            } else {
+              // Not a UUID, so treat as company name
+              companyId = await companyService.findOrCreateCompanyByName(userData.company);
+              console.log('Created/found company by name:', companyId);
+            }
+          } catch (error) {
+            console.error('Error processing company:', error);
+          }
+        }
+        
         // Update profile with company and job_title if provided
-        if (userData.company || userData.jobTitle) {
-          console.log('Updating profile with company and job title:', userData.company, userData.jobTitle);
+        if (companyId || userData.jobTitle) {
+          console.log('Updating profile with company ID and job title:', companyId, userData.jobTitle);
           const { error: updateError } = await supabase
             .from('profiles')
             .update({
-              company: userData.company,
+              company: companyId,
               job_title: userData.jobTitle
             })
             .eq('id', authData.user.id);
@@ -150,76 +189,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (updateError) {
             console.error('Error updating profile with company:', updateError);
           }
-          
-          // Add user to company_members if company is provided
-          if (userData.company && userData.role === 'referrer') {
-            console.log('Adding user to company_members with company:', userData.company);
-            
-            // First check if the company exists by ID
-            const isCompanyId = await companyService.getCompanyById(userData.company);
-            
-            if (isCompanyId) {
-              // If it's a valid company ID, add directly
-              await companyService.addCompanyMember(
-                authData.user.id,
-                userData.company,
-                userData.jobTitle || 'Member'
-              );
-            } else {
-              // If not an ID, it might be a company name (from custom input)
-              // Check if company with this name exists
-              console.log('Checking for company by name:', userData.company);
-              const { data: companies } = await supabase
-                .from('companies')
-                .select('id, name')
-                .ilike('name', userData.company);
-                
-              if (companies && companies.length > 0) {
-                // Use existing company
-                console.log('Found existing company by name:', companies[0]);
-                await companyService.addCompanyMember(
-                  authData.user.id,
-                  companies[0].id,
-                  userData.jobTitle || 'Member'
-                );
-                
-                // Update profile with correct company ID
-                await supabase
-                  .from('profiles')
-                  .update({ company: companies[0].id })
-                  .eq('id', authData.user.id);
-              } else {
-                // Create new company
-                console.log('Creating new company with name:', userData.company);
-                const { data: newCompany, error: companyError } = await supabase
-                  .from('companies')
-                  .insert({
-                    name: userData.company
-                  })
-                  .select('id')
-                  .single();
-                  
-                if (companyError) {
-                  console.error('Error creating company:', companyError);
-                } else if (newCompany) {
-                  console.log('New company created with ID:', newCompany.id);
-                  
-                  // Add user to new company
-                  await companyService.addCompanyMember(
-                    authData.user.id,
-                    newCompany.id,
-                    userData.jobTitle || 'Member'
-                  );
-                  
-                  // Update profile with correct company ID
-                  await supabase
-                    .from('profiles')
-                    .update({ company: newCompany.id })
-                    .eq('id', authData.user.id);
-                }
-              }
-            }
-          }
+        }
+        
+        // Force sync company memberships to ensure consistency
+        if (companyId) {
+          await companyService.syncProfilesWithCompanyMembers();
         }
         
         // Fetch updated profile
