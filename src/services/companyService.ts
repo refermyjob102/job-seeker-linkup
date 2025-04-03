@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Company, CompanyMember, Profile, CompanyMemberWithProfile } from "@/types/database";
 

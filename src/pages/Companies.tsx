@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -43,6 +42,9 @@ const Companies = () => {
     const fetchCompanies = async () => {
       setLoading(true);
       try {
+        // First sync company data
+        await companyService.syncProfilesWithCompanyMembers();
+        
         // Try to get companies from Supabase
         const dbCompanies = await companyService.getAllCompanies();
         
