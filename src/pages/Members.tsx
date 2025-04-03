@@ -32,8 +32,16 @@ const Members = () => {
         }
 
         if (data) {
-          setMembers(data);
-          setFilteredMembers(data);
+          // Convert role to the expected type before setting state
+          const typedProfiles = data.map(profile => ({
+            ...profile,
+            role: (profile.role === 'seeker' || profile.role === 'referrer') 
+              ? profile.role as 'seeker' | 'referrer' 
+              : 'seeker' // Default fallback if role is invalid
+          })) as Profile[];
+          
+          setMembers(typedProfiles);
+          setFilteredMembers(typedProfiles);
         }
       } catch (error) {
         console.error('Error fetching members:', error);

@@ -33,7 +33,17 @@ const MemberDetails = () => {
           throw error;
         }
 
-        setMemberData(data);
+        if (data) {
+          // Convert role to the expected type before setting state
+          const typedProfile = {
+            ...data,
+            role: (data.role === 'seeker' || data.role === 'referrer') 
+              ? data.role as 'seeker' | 'referrer' 
+              : 'seeker' // Default fallback if role is invalid
+          } as Profile;
+          
+          setMemberData(typedProfile);
+        }
       } catch (error) {
         console.error('Error fetching member details:', error);
         toast({
