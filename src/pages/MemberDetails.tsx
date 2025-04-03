@@ -81,7 +81,7 @@ const MemberDetails = () => {
   }
 
   // Parse skills from string to array if it exists
-  const skillsArray = memberData.skills ? memberData.skills.split(',').map(skill => skill.trim()) : [];
+  const skillsArray = memberData?.skills ? memberData.skills.split(',').map(skill => skill.trim()) : [];
 
   return (
     <div className="space-y-6">
@@ -99,44 +99,44 @@ const MemberDetails = () => {
           <div className="flex flex-col sm:flex-row gap-6">
             <div className="flex flex-col items-center">
               <Avatar className="h-24 w-24 mb-2">
-                <AvatarImage src={memberData.avatar_url || ''} alt={`${memberData.first_name} ${memberData.last_name}`} />
+                <AvatarImage src={memberData?.avatar_url || ''} alt={`${memberData?.first_name} ${memberData?.last_name}`} />
                 <AvatarFallback className="text-lg">
-                  {memberData.first_name?.charAt(0) || ''}
-                  {memberData.last_name?.charAt(0) || ''}
+                  {memberData?.first_name?.charAt(0) || ''}
+                  {memberData?.last_name?.charAt(0) || ''}
                 </AvatarFallback>
               </Avatar>
-              {memberData.available_for_referrals && (
+              {memberData?.available_for_referrals && (
                 <Badge variant="secondary" className="mt-2">
                   Available for referrals
                 </Badge>
               )}
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold mb-1">{memberData.first_name} {memberData.last_name}</h1>
+              <h1 className="text-2xl font-bold mb-1">{memberData?.first_name} {memberData?.last_name}</h1>
               <div className="text-lg text-muted-foreground mb-4">
-                {memberData.job_title} {memberData.company && `at ${memberData.company}`}
+                {memberData?.job_title} {memberData?.company && `at ${memberData.company}`}
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm mb-6">
-                {memberData.company && (
+                {memberData?.company && (
                   <div className="flex items-center">
                     <Building className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span>{memberData.company}</span>
                   </div>
                 )}
-                {memberData.department && (
+                {memberData?.department && (
                   <div className="flex items-center">
                     <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span>{memberData.department}</span>
                   </div>
                 )}
-                {memberData.location && (
+                {memberData?.location && (
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span>{memberData.location}</span>
                   </div>
                 )}
-                {memberData.email && (
+                {memberData?.email && (
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span>{memberData.email}</span>
@@ -145,7 +145,7 @@ const MemberDetails = () => {
               </div>
 
               <div className="flex gap-3 mt-4">
-                {memberData.available_for_referrals && (
+                {memberData?.available_for_referrals && (
                   <Button>Request Referral</Button>
                 )}
                 <Button variant="outline">Send Message</Button>

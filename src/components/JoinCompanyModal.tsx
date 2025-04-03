@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 
+// Form schema validation
 const formSchema = z.object({
   companyId: z.string({
     required_error: "Please select a company",
@@ -155,9 +155,6 @@ const JoinCompanyModal = ({
           console.error("Error updating profile:", profileError);
           throw profileError;
         }
-        
-        // Run a sync to ensure company_members and profiles are in sync
-        await companyService.syncProfilesWithCompanyMembers();
         
         toast({
           title: "Success",
