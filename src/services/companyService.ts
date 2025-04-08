@@ -60,13 +60,20 @@ class CompanyService {
         return [];
       }
       
-      // Filter out any members where profiles might be an error object or null
+      // Filter out any members where profiles might be an error object, null, or undefined
       const validMembers = membersData.filter(member => 
         member.profiles && 
         typeof member.profiles === 'object' && 
         !('error' in member.profiles) &&
         member.profiles !== null
       );
+      
+      // Additional null check before accessing properties
+      validMembers.forEach(member => {
+        if (!member.profiles) {
+          console.warn(`Found member with null profiles: ${member.id}`);
+        }
+      });
       
       // Type assertion here is safe after filtering - convert to unknown first to satisfy TypeScript
       return validMembers as unknown as CompanyMemberWithProfile[];
