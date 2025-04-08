@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
@@ -25,6 +26,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   clearError: () => void;
   fetchProfile: (userId: string) => Promise<void>;
+  isProfileComplete: () => boolean;
+  isNewUser: boolean;
+  setIsNewUser: (isNew: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -103,7 +108,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       if (data) {
-        setUser({ ...data, id: userId });
+        // Ensure that the role is properly typed as UserRole
+        const typedData = {
+          ...data,
+          role: data.role as UserRole
+        };
+        setUser({ ...typedData, id: userId });
       }
     } catch (error: any) {
       console.error("Error fetching user profile:", error);
@@ -173,7 +183,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             .eq('id', data.user.id);
         }
 
-        return data.user;
+        // Set new user flag
+        setIsNewUser(true);
+        
+        // Return successful registration
+        return;
       }
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -209,6 +223,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   };
 
+  const isProfileComplete = () => {
+    if (!user) return false;
+    
+    const requiredFields = ['bio', 'location'];
+    
+    // Additional fields for referrers
+    if (user.role === 'referrer') {
+      requiredFields.push('company', 'job_title');
+    }
+    
+    // Check if any required field is missing
+    return !requiredFields.some(field => !user[field as keyof typeof user]);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -221,6 +249,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         logout,
         clearError,
         fetchProfile,
+        isProfileComplete,
+        isNewUser,
+        setIsNewUser,
       }}
     >
       {children}

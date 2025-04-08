@@ -64,7 +64,8 @@ class CompanyService {
       const validMembers = membersData.filter(member => 
         member.profiles && 
         typeof member.profiles === 'object' && 
-        !('error' in member.profiles)
+        !('error' in member.profiles) &&
+        member.profiles !== null
       );
       
       // Type assertion here is safe after filtering - convert to unknown first to satisfy TypeScript
