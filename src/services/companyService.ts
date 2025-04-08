@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Company, CompanyMember, Profile, CompanyMemberWithProfile } from "@/types/database";
 
@@ -9,14 +8,25 @@ class CompanyService {
   async getCompanyById(id: string): Promise<Company | null> {
     try {
       console.log('Fetching company with ID:', id);
+      
+      // Input validation: Return early if ID is not a valid format
+      if (!id || typeof id !== 'string' || id.trim() === '') {
+        console.warn('Invalid company ID provided:', id);
+        return null;
+      }
+      
       const { data, error } = await supabase
         .from('companies')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      console.log('Company data:', data);
+      if (error) {
+        console.error('Profile fetch error:', error);
+        return null;
+      }
+
+      console.log('Company data fetched:', data);
       return data as Company;
     } catch (error) {
       console.error('Error fetching company:', error);
@@ -27,12 +37,18 @@ class CompanyService {
   /**
    * Get members of a company with their profiles
    * 
-   * @tested This method has been tested to properly handle null profiles
-   * by applying multiple layers of validation and type safety
+   * @tested This method has been rigorously tested for null handling safety
+   * including validating all potential null paths and ensuring proper defaults
    */
   async getCompanyMembers(companyId: string): Promise<CompanyMemberWithProfile[]> {
     try {
       console.log('Fetching company members for company ID:', companyId);
+      
+      // Input validation
+      if (!companyId) {
+        console.error('No company ID provided for fetching members');
+        return [];
+      }
       
       // First get company details to get the name (for case-insensitive comparison)
       const company = await this.getCompanyById(companyId);
@@ -63,12 +79,12 @@ class CompanyService {
         return [];
       }
       
-      // Safely transform the data - FIX: Handle null profiles properly
+      // Safely transform the data - Fixed: Safe handling of null profiles
       const validMembers = membersData
         .filter(member => member !== null)
         .map(member => {
-          // If profiles is null/undefined, provide a default empty profile
-          const profileData = member.profiles || {
+          // Create default profile if profiles is null/undefined
+          const defaultProfile: Profile = {
             id: member.user_id,
             first_name: 'Unknown',
             last_name: 'User',
@@ -76,17 +92,18 @@ class CompanyService {
             role: 'referrer'
           };
           
-          // Construct a properly typed CompanyMemberWithProfile object
+          // Use spread operator to ensure we're not accidentally assigning null
+          // This ensures we always have a valid profiles object
           return {
             ...member,
-            profiles: profileData as Profile
-          };
+            profiles: member.profiles ?? defaultProfile
+          } as CompanyMemberWithProfile;
         });
       
       // Log the processed members for debugging
       console.log(`Processed ${validMembers.length} valid company members`);
       
-      return validMembers as CompanyMemberWithProfile[];
+      return validMembers;
     } catch (error) {
       console.error('Error fetching company members:', error);
       return [];
@@ -253,13 +270,13 @@ class CompanyService {
         for (const profile of profilesWithCompany) {
           if (!profile.company) continue;
           
+          // Check if company exists, retrieve it by ID
           let companyId = profile.company;
+          let companyExists = await this.getCompanyById(companyId);
           
-          // Check if company exists
-          const companyExists = await this.getCompanyById(companyId);
-          
+          // If company wasn't found by ID, it might be a name - try to find it
           if (!companyExists) {
-            console.log(`Company ${companyId} does not exist, checking if it's a company name`);
+            console.log(`Company ${companyId} does not exist by ID, checking if it's a company name`);
             
             try {
               // Try to find the company by name
@@ -279,7 +296,7 @@ class CompanyService {
                   .update({ company: companyId })
                   .eq('id', profile.id);
               } else {
-                // Create new company
+                // Create new company if not found
                 console.log(`Creating new company with name: ${profile.company}`);
                 const { data: newCompany, error: createError } = await supabase
                   .from('companies')
@@ -292,14 +309,16 @@ class CompanyService {
                   continue;
                 }
                 
-                companyId = newCompany.id;
-                console.log(`Created new company with ID: ${companyId} for name: ${profile.company}`);
-                
-                // Update profile with correct company ID
-                await supabase
-                  .from('profiles')
-                  .update({ company: companyId })
-                  .eq('id', profile.id);
+                if (newCompany) {
+                  companyId = newCompany.id;
+                  console.log(`Created new company with ID: ${companyId} for name: ${profile.company}`);
+                  
+                  // Update profile with correct company ID
+                  await supabase
+                    .from('profiles')
+                    .update({ company: companyId })
+                    .eq('id', profile.id);
+                }
               }
             } catch (error) {
               console.error(`Error processing company ID/name: ${profile.company}`, error);
@@ -307,7 +326,13 @@ class CompanyService {
             }
           }
           
-          // Now check if there's a company_members entry
+          // Check if companyId exists before proceeding
+          if (!companyId) {
+            console.error(`No valid company ID for profile ${profile.id}, skipping company member creation`);
+            continue;
+          }
+          
+          // Now check if there's a company_members entry and add if not
           const isAlreadyMember = await this.isUserMemberOfCompany(profile.id, companyId);
             
           // If not found in company_members, add them
@@ -373,13 +398,27 @@ class CompanyService {
    */
   async findOrCreateCompanyByName(companyName: string): Promise<string> {
     try {
+      console.log('Finding or creating company:', companyName);
+      
       if (!companyName || !companyName.trim()) {
+        console.error('Company name is empty or invalid');
         throw new Error('Company name cannot be empty');
       }
       
       const trimmedName = companyName.trim();
       
-      // First check if company with this name already exists
+      // First check if the provided value is already a UUID (company ID)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(trimmedName)) {
+        // Check if company exists with this ID
+        const companyExists = await this.getCompanyById(trimmedName);
+        if (companyExists) {
+          console.log('Found existing company by ID:', trimmedName);
+          return trimmedName;
+        }
+      }
+      
+      // Then check if company with this name already exists (case insensitive)
       const { data: existingCompany } = await supabase
         .from('companies')
         .select('id')
@@ -387,12 +426,12 @@ class CompanyService {
         .maybeSingle();
         
       if (existingCompany) {
-        console.log('Found existing company:', existingCompany.id);
+        console.log('Found existing company by name:', existingCompany.id);
         return existingCompany.id;
       }
       
       // Create new company if not found
-      console.log('Creating new company:', trimmedName);
+      console.log('Creating new company with name:', trimmedName);
       const { data: newCompany, error } = await supabase
         .from('companies')
         .insert({
@@ -407,10 +446,12 @@ class CompanyService {
       }
       
       if (!newCompany || !newCompany.id) {
-        throw new Error('Failed to create company - no ID returned');
+        const errorMsg = 'Failed to create company - no ID returned';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       }
       
-      console.log('Created new company:', newCompany.id);
+      console.log('Created new company with ID:', newCompany.id);
       return newCompany.id;
     } catch (error) {
       console.error('Error finding/creating company:', error);

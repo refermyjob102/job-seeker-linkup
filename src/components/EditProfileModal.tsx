@@ -38,8 +38,10 @@ const EditProfileModal = ({
   const [showCustomCompany, setShowCustomCompany] = useState(false);
   const [customCompany, setCustomCompany] = useState("");
 
+  // Initialize form data when profile changes or modal opens
   useEffect(() => {
-    if (profile) {
+    if (profile && open) {
+      console.log("Setting initial form data from profile:", profile);
       setFormData({
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
@@ -63,7 +65,10 @@ const EditProfileModal = ({
       setPreviousCompany(profile.company);
 
       // Check if current company is not in dropdown and should be treated as custom
-      if (profile.company && !topCompanies.some(c => c.id === profile.company)) {
+      const isInTopCompanies = profile.company && topCompanies.some(c => c.id === profile.company);
+      
+      if (profile.company && !isInTopCompanies) {
+        console.log("Setting company as custom:", profile.company);
         setShowCustomCompany(true);
         setCustomCompany(profile.company);
       } else {
@@ -71,8 +76,9 @@ const EditProfileModal = ({
         setCustomCompany("");
       }
     }
-  }, [profile]);
+  }, [profile, open]);
 
+  // Ensure all top companies exist in database when the component loads
   useEffect(() => {
     // Ensure all top companies exist in database when the component loads
     const initializeCompanies = async () => {
@@ -85,26 +91,28 @@ const EditProfileModal = ({
   }, [open]);
 
   const handleInputChange = (name: string, value: string | boolean) => {
-    setFormData({
-      ...formData,
+    console.log(`Setting form data: ${name} = ${value}`);
+    setFormData(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
   const handleCompanyChange = (value: string) => {
+    console.log("Company selection changed to:", value);
     if (value === "others") {
       setShowCustomCompany(true);
       // Keep previous custom company if available
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         company: customCompany || "",
-      });
+      }));
     } else {
       setShowCustomCompany(false);
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         company: value,
-      });
+      }));
       setCustomCompany("");
     }
   };
@@ -112,10 +120,10 @@ const EditProfileModal = ({
   const handleCustomCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCustomCompany(value);
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       company: value,
-    });
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,6 +131,8 @@ const EditProfileModal = ({
     setIsSubmitting(true);
     
     try {
+      console.log("Submitting profile update with data:", formData);
+      
       // Determine final company value
       let finalCompanyId = formData.company;
       
@@ -143,32 +153,43 @@ const EditProfileModal = ({
         }
       }
       
-      // First call the onSave prop for backward compatibility
-      await onSave({
+      const updatedData = {
         ...formData,
         company: finalCompanyId
-      });
+      };
+      
+      console.log("Final profile data to save:", updatedData);
+      
+      // First call the onSave prop for backward compatibility
+      await onSave(updatedData);
       
       // Then update the profile directly in Supabase if we have a user ID
       if (user?.id) {
-        const { error } = await supabase
+        console.log(`Updating profile in database for user ${user.id}`);
+        const { data, error } = await supabase
           .from('profiles')
-          .update({
-            ...formData,
-            company: finalCompanyId
-          })
-          .eq('id', user.id);
+          .update(updatedData)
+          .eq('id', user.id)
+          .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Database update error:", error);
+          throw error;
+        }
+        
+        console.log("Profile update result:", data);
         
         // Update company membership if company changed
         if (finalCompanyId !== previousCompany) {
+          console.log(`Company changed from ${previousCompany} to ${finalCompanyId}`);
+          
           // If company is set, add user to company_members
           if (finalCompanyId) {
             // Check if user is already a member
             const isMember = await companyService.isUserMemberOfCompany(user.id, finalCompanyId);
             
             if (!isMember) {
+              console.log(`Adding user ${user.id} to company ${finalCompanyId}`);
               // Add user as member with job title and department from profile
               await companyService.addCompanyMember(
                 user.id,
@@ -218,6 +239,7 @@ const EditProfileModal = ({
     { label: "Others", value: "others" }
   ];
 
+  // Render function remains the same
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`sm:max-w-[700px] max-h-[90vh] overflow-y-auto ${isMobile ? 'p-4' : 'p-6'}`}>
