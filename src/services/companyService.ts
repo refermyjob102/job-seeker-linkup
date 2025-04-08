@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Company, CompanyMember, Profile, CompanyMemberWithProfile } from "@/types/database";
 
@@ -69,11 +68,11 @@ class CompanyService {
       );
       
       // Additional null check before accessing properties
-      validMembers.forEach(member => {
+      for (const member of validMembers) {
         if (!member.profiles) {
           console.warn(`Found member with null profiles: ${member.id}`);
         }
-      });
+      }
       
       // Type assertion here is safe after filtering - convert to unknown first to satisfy TypeScript
       return validMembers as unknown as CompanyMemberWithProfile[];
