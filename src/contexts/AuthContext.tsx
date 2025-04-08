@@ -1,133 +1,151 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
+import { Profile } from "@/types/database";
+import { companyService } from "@/services/companyService";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/types/database';
-import { useToast } from '@/components/ui/use-toast';
-import { companyService } from '@/services/companyService';
+export type UserRole = "seeker" | "referrer";
 
-export type UserRole = 'seeker' | 'referrer';
+interface UserData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: UserRole;
+  company?: string;
+  jobTitle?: string;
+}
 
 interface AuthContextType {
-  user: Profile | null;
+  user: (Profile & { id: string }) | null;
+  session: Session | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { 
-    first_name: string;
-    last_name: string;
-    email: string;
-    role: UserRole;
-    company?: string;
-    jobTitle?: string;
-  }, password: string) => Promise<void>;
-  logout: () => void;
+  register: (userData: UserData, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   clearError: () => void;
-  isProfileComplete: () => boolean;
-  isNewUser: boolean;
-  setIsNewUser: (value: boolean) => void;
   fetchProfile: (userId: string) => Promise<void>;
-  updateProfileState: (profileData: Partial<Profile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<(Profile & { id: string }) | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isNewUser, setIsNewUser] = useState<boolean>(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
+    const fetchSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          throw error;
+        }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setUser(null);
-      }
-      setIsLoading(false);
-    });
+        setSession(data.session);
 
-    return () => subscription.unsubscribe();
+        if (data.session?.user) {
+          await fetchProfile(data.session.user.id);
+        }
+      } catch (error: any) {
+        console.error("Error fetching session:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        setSession(session);
+
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          setUser(null);
+        }
+
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user ID:', userId);
+      setIsLoading(true);
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
         .single();
 
-      if (error) throw error;
-      
-      // Ensure the role is cast to the correct type
-      if (data) {
-        // Convert role to expected type
-        const typedProfile = {
-          ...data,
-          role: (data.role === 'seeker' || data.role === 'referrer') 
-            ? data.role as 'seeker' | 'referrer' 
-            : 'seeker' // Default fallback if role is invalid
-        } as Profile;
-        
-        console.log('Profile data fetched:', typedProfile);
-        setUser(typedProfile);
-      } else {
-        console.error('No profile data found');
-        setUser(null);
+      if (error) {
+        throw error;
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setUser(null);
+
+      if (data) {
+        setUser({ ...data, id: userId });
+      }
+    } catch (error: any) {
+      console.error("Error fetching user profile:", error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Add a function to update the profile state without fetching from the database
-  const updateProfileState = (profileData: Partial<Profile>) => {
-    if (user) {
-      setUser({ ...user, ...profileData });
-    }
-  };
-
-  const isProfileComplete = () => {
-    if (!user) return false;
-    
-    return !!(
-      user.first_name && 
-      user.last_name && 
-      user.email &&
-      user.bio && 
-      user.location
-    );
-  };
-
-  const register = async (userData: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    role: UserRole;
-    company?: string;
-    jobTitle?: string;
-  }, password: string) => {
-    setIsLoading(true);
-    setError(null);
-    
+  const login = async (email: string, password: string) => {
     try {
-      console.log('Registering user with data:', userData);
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        await fetchProfile(data.user.id);
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (userData: UserData, password: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Create user in Supabase
+      const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password,
         options: {
@@ -139,122 +157,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Wait a bit for the trigger to create the profile
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        let companyId: string | undefined = undefined;
-        
-        // Process company if provided
-        if (userData.company && userData.company.trim() !== '') {
-          try {
-            console.log('Processing company:', userData.company);
-            
-            // Check if company is a UUID (existing company)
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (uuidRegex.test(userData.company)) {
-              // If it's a valid UUID format, try to get the company
-              const company = await companyService.getCompanyById(userData.company);
-              if (company) {
-                companyId = userData.company;
-                console.log('Using existing company by ID:', companyId);
-              } else {
-                // If company not found by ID, treat as a name
-                companyId = await companyService.findOrCreateCompanyByName(userData.company);
-                console.log('Created/found company by name:', companyId);
-              }
-            } else {
-              // Not a UUID, so treat as company name
-              companyId = await companyService.findOrCreateCompanyByName(userData.company);
-              console.log('Created/found company by name:', companyId);
-            }
-          } catch (error) {
-            console.error('Error processing company:', error);
-          }
-        }
-        
-        // Update profile with company and job_title if provided
-        if (companyId || userData.jobTitle) {
-          console.log('Updating profile with company ID and job title:', companyId, userData.jobTitle);
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              company: companyId,
-              job_title: userData.jobTitle
-            })
-            .eq('id', authData.user.id);
-            
-          if (updateError) {
-            console.error('Error updating profile with company:', updateError);
-          }
-        }
-        
-        // Force sync company memberships to ensure consistency
-        if (companyId) {
-          try {
-            // First add user as company member
-            await companyService.addCompanyMember(
-              authData.user.id,
-              companyId,
-              userData.jobTitle || 'Member'
-            );
-            
-            // Then sync all profiles to ensure consistency
-            await companyService.syncProfilesWithCompanyMembers();
-          } catch (err) {
-            console.error('Error syncing company memberships:', err);
-          }
-        }
-        
-        // Fetch updated profile
-        await fetchProfile(authData.user.id);
-        
-        // Set as new user to trigger profile completion prompt
-        setIsNewUser(true);
-        
-        toast({
-          title: "Registration successful!",
-          description: "Your account has been created.",
-        });
-      }
-    } catch (err) {
-      console.error('Registration error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during registration');
-      toast({
-        title: "Registration failed",
-        description: err instanceof Error ? err.message : 'An error occurred during registration',
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
       if (error) throw error;
 
       if (data.user) {
-        await fetchProfile(data.user.id);
+        // If user is a referrer and provided a company, add them to that company
+        if (userData.role === 'referrer' && userData.company) {
+          // This is where we should make sure to call companyService to add the user to the company
+          const companyId = await companyService.findOrCreateCompanyByName(userData.company);
+          await companyService.addCompanyMember(data.user.id, companyId, userData.jobTitle || 'Member');
+
+          // Update the user profile with the correct company ID
+          await supabase
+            .from('profiles')
+            .update({ company: companyId })
+            .eq('id', data.user.id);
+        }
+
+        return data.user;
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
-      toast({
-        title: "Login failed",
-        description: err instanceof Error ? err.message : 'An error occurred during login',
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setError(error.message);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -262,44 +186,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        throw error;
+      }
+
       setUser(null);
-    } catch (err) {
-      console.error('Logout error:', err);
-      toast({
-        title: "Logout failed",
-        description: err instanceof Error ? err.message : 'An error occurred during logout',
-        variant: "destructive",
-      });
+      setSession(null);
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const clearError = () => setError(null);
+  const clearError = () => {
+    setError(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
-      error, 
-      login, 
-      register, 
-      logout, 
-      clearError, 
-      isProfileComplete, 
-      isNewUser, 
-      setIsNewUser,
-      fetchProfile,
-      updateProfileState
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        error,
+        login,
+        register,
+        logout,
+        clearError,
+        fetchProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

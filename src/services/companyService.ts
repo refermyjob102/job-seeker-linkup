@@ -39,7 +39,7 @@ class CompanyService {
       }
       
       // Get members from company_members table with their profiles
-      // The key fix is using the correct join syntax for Supabase: profiles(*)
+      // The key fix is using the correct join syntax for Supabase: profiles:user_id(*)
       const { data: membersData, error: membersError } = await supabase
         .from('company_members')
         .select(`
@@ -60,13 +60,15 @@ class CompanyService {
         return [];
       }
       
-      // Filter out any members where profiles might be an error object
+      // Filter out any members where profiles might be an error object or null
       const validMembers = membersData.filter(member => 
-        member.profiles && typeof member.profiles === 'object' && !('error' in member.profiles)
+        member.profiles && 
+        typeof member.profiles === 'object' && 
+        !('error' in member.profiles)
       );
       
-      // Type assertion here is safe after filtering
-      return validMembers as CompanyMemberWithProfile[];
+      // Type assertion here is safe after filtering - convert to unknown first to satisfy TypeScript
+      return validMembers as unknown as CompanyMemberWithProfile[];
     } catch (error) {
       console.error('Error fetching company members:', error);
       return [];

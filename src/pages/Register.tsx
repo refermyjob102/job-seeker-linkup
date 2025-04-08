@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -82,7 +81,9 @@ const Register = () => {
     }
 
     // Determine the company value to send
-    const companyValue = company === "others" ? customCompany : company;
+    // For company dropdown selection, we'll use the ID directly
+    // For custom company, we'll use the name and create/find it during registration
+    let companyValue = company === "others" ? customCompany : company;
     
     if (isReferrer && company === "others" && !customCompany.trim()) {
       toast({
@@ -94,6 +95,24 @@ const Register = () => {
     }
     
     try {
+      // For new custom companies, ensure it exists in the database before registration
+      if (isReferrer && company === "others" && customCompany.trim()) {
+        // Find or create the company first to get its ID
+        try {
+          const companyId = await companyService.findOrCreateCompanyByName(customCompany.trim());
+          companyValue = companyId; // Use the company ID for registration
+          console.log('Custom company created/found with ID:', companyId);
+        } catch (err) {
+          console.error('Error finding/creating company:', err);
+          toast({
+            title: "Company Error",
+            description: "Failed to create company. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
       console.log('Submitting registration with company:', companyValue);
       await register({
         first_name: firstName,
@@ -110,9 +129,20 @@ const Register = () => {
         variant: "default",
       });
       
+      // Force a sync of profiles with company_members to ensure consistency
+      if (isReferrer) {
+        try {
+          await companyService.syncProfilesWithCompanyMembers();
+        } catch (syncError) {
+          console.error('Error syncing company data:', syncError);
+          // We don't want to fail registration if just the sync fails
+        }
+      }
+      
       navigate("/app");
     } catch (err) {
       // Error is handled in auth context
+      console.error('Registration error:', err);
     }
   };
 

@@ -152,6 +152,7 @@ const JoinCompanyModal = ({
           description: "You have joined the company successfully.",
           variant: "default",
         });
+        
         onCompanyJoined();
         onOpenChange(false);
       } else {
