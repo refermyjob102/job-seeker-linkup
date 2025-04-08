@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building } from "lucide-react";
+import { Building, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import { 
@@ -36,22 +36,73 @@ const Login = () => {
   // Get the return URL if available
   const from = location.state?.from || "/app";
 
+  const validateInputs = (): boolean => {
+    if (!email.trim() || !email.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!password.trim()) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    
+    if (!validateInputs()) {
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
+      console.log("Attempting login for:", email);
       await login(email, password);
+      console.log("Login successful, checking profile completion");
       
       // If profile is incomplete, redirect to profile page, otherwise to the intended destination
       if (!isProfileComplete()) {
+        console.log("Profile incomplete, redirecting to profile page");
+        toast({
+          title: "Complete Your Profile",
+          description: "Please complete your profile information to continue.",
+        });
         navigate("/app/profile");
       } else {
+        console.log("Profile complete, redirecting to:", from);
         navigate(from);
       }
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      
+      // Handle specific errors
+      const errorMessage = error.message || "";
+      if (errorMessage.includes("Invalid login credentials")) {
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password. Please check your credentials and try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Error",
+          description: errorMessage || "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -82,7 +133,7 @@ const Login = () => {
       });
       
       setIsResetDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Reset password error:", error);
       toast({
         title: "Error",
@@ -133,7 +184,10 @@ const Login = () => {
                   type="email"
                   placeholder="your.email@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearError();
+                  }}
                   required
                 />
               </div>
@@ -155,14 +209,28 @@ const Login = () => {
                   type="password"
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    clearError();
+                  }}
                   showPasswordToggle
                   required
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign in"}
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
               </Button>
               
               <div className="text-center text-sm">
@@ -203,7 +271,14 @@ const Login = () => {
               onClick={handleResetPassword}
               disabled={isResetSubmitting}
             >
-              {isResetSubmitting ? "Sending..." : "Send Reset Link"}
+              {isResetSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Reset Link"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

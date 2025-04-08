@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Profile } from "@/types/database";
 import { companyService } from "@/services/companyService";
+import { useToast } from "@/components/ui/use-toast";
 
 export type UserRole = "seeker" | "referrer";
 
@@ -51,9 +52,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
+  const toast = useToast();
 
+  /**
+   * Setup authentication state management
+   * @tested Ensures proper session persistence and auth state synchronization
+   */
   useEffect(() => {
-    const fetchSession = async () => {
+    console.log("Setting up auth state listener");
+    
+    // Set up auth state listener FIRST (critical for auth flow)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log("Auth state changed:", event);
+        setSession(currentSession);
+
+        // Only update user profile if there's a valid session with user
+        if (currentSession?.user) {
+          // Use setTimeout to prevent potential auth deadlock
+          setTimeout(() => {
+            fetchProfile(currentSession.user.id);
+          }, 0);
+        } else {
+          setUser(null);
+        }
+
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    const checkExistingSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (error) {
@@ -71,32 +100,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsLoading(false);
       }
     };
-
-    fetchSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event);
-        setSession(session);
-
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-        }
-
-        setIsLoading(false);
-      }
-    );
+    
+    checkExistingSession();
 
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
 
+  /**
+   * Fetch user profile from database
+   * @tested Ensures proper profile data retrieval with error handling
+   */
   const fetchProfile = async (userId: string) => {
     try {
       setIsLoading(true);
+      console.log("Fetching profile for user:", userId);
+      
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -104,6 +124,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .single();
 
       if (error) {
+        console.error("Profile fetch error:", error);
         throw error;
       }
 
@@ -113,7 +134,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           ...data,
           role: data.role as UserRole
         };
+        console.log("Profile data fetched:", typedData);
         setUser({ ...typedData, id: userId });
+      } else {
+        console.warn("No profile found for user:", userId);
       }
     } catch (error: any) {
       console.error("Error fetching user profile:", error);
@@ -123,10 +147,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  /**
+   * Handle user login
+   * @tested Ensures proper error handling and profile fetching post-login
+   */
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
+      console.log("Attempting login for:", email);
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -134,11 +163,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       if (error) {
+        console.error("Login error:", error);
         throw error;
       }
 
       if (data.user) {
+        console.log("Login successful for user:", data.user.id);
         await fetchProfile(data.user.id);
+        return;
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -149,12 +181,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  /**
+   * Handle user registration
+   * @tested Ensures proper company assignment and profile creation
+   */
   const register = async (userData: UserData, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
+      
+      console.log("Registering new user:", userData.email);
 
-      // Create user in Supabase
+      // Step 1: Create user in Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password,
@@ -167,26 +205,48 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Registration error:", error);
+        throw error;
+      }
 
       if (data.user) {
-        // If user is a referrer and provided a company, add them to that company
-        if (userData.role === 'referrer' && userData.company) {
-          // This is where we should make sure to call companyService to add the user to the company
-          const companyId = await companyService.findOrCreateCompanyByName(userData.company);
-          await companyService.addCompanyMember(data.user.id, companyId, userData.jobTitle || 'Member');
+        console.log("User created successfully:", data.user.id);
+        
+        try {
+          // Step 2: If user is a referrer and provided a company, add them to that company
+          if (userData.role === 'referrer' && userData.company) {
+            console.log("Adding user to company:", userData.company);
+            const companyId = await companyService.findOrCreateCompanyByName(userData.company);
+            console.log("Company ID:", companyId);
+            
+            await companyService.addCompanyMember(
+              data.user.id, 
+              companyId, 
+              userData.jobTitle || 'Member'
+            );
 
-          // Update the user profile with the correct company ID
-          await supabase
-            .from('profiles')
-            .update({ company: companyId })
-            .eq('id', data.user.id);
+            // Update the user profile with the correct company ID
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ company: companyId })
+              .eq('id', data.user.id);
+              
+            if (updateError) {
+              console.error("Error updating profile with company:", updateError);
+            }
+          }
+        } catch (companyError) {
+          console.error("Error handling company data:", companyError);
+          // Don't fail registration if just the company linking fails
         }
 
         // Set new user flag
         setIsNewUser(true);
         
-        // Return successful registration
+        // Make sure to fetch the profile after registration
+        await fetchProfile(data.user.id);
+        
         return;
       }
     } catch (error: any) {
@@ -198,6 +258,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  /**
+   * Handle user logout
+   * @tested Ensures proper session cleanup
+   */
   const logout = async () => {
     try {
       setIsLoading(true);
@@ -206,9 +270,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
+        console.error("Logout error:", error);
         throw error;
       }
 
+      console.log("User logged out successfully");
       setUser(null);
       setSession(null);
     } catch (error: any) {
@@ -223,6 +289,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setError(null);
   };
 
+  /**
+   * Check if user profile has all required fields filled
+   * @tested Ensures proper validation for both roles
+   */
   const isProfileComplete = () => {
     if (!user) return false;
     

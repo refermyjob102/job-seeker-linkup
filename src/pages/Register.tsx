@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -39,6 +40,7 @@ const Register = () => {
   const [jobTitle, setJobTitle] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showCustomCompany, setShowCustomCompany] = useState(false);
+  const [registerAttempted, setRegisterAttempted] = useState(false);
   
   const isReferrer = role === "referrer";
 
@@ -54,11 +56,22 @@ const Register = () => {
   useEffect(() => {
     // Ensure all top companies exist in database when the component loads
     const initializeCompanies = async () => {
-      await companyService.ensureTopCompaniesExist(topCompanies);
+      try {
+        console.log("Initializing top companies");
+        await companyService.ensureTopCompaniesExist(topCompanies);
+        console.log("Top companies initialized successfully");
+      } catch (err) {
+        console.error("Failed to initialize top companies:", err);
+        toast({
+          title: "Warning",
+          description: "Failed to load company data. You can still register, but company selection may be limited.",
+          variant: "destructive",
+        });
+      }
     };
     
     initializeCompanies();
-  }, []);
+  }, [toast]);
 
   const handleCompanyChange = (value: string) => {
     setCompany(value);
@@ -68,15 +81,89 @@ const Register = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const validateInputs = (): boolean => {
+    // Basic validation rules
+    if (!firstName.trim()) {
+      toast({
+        title: "First Name Required",
+        description: "Please enter your first name.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!lastName.trim()) {
+      toast({
+        title: "Last Name Required",
+        description: "Please enter your last name.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!email.trim() || !email.includes('@')) {
+      toast({
+        title: "Valid Email Required",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (isReferrer && !company) {
+      toast({
+        title: "Company Required",
+        description: "Please select a company.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (isReferrer && company === "others" && !customCompany.trim()) {
+      toast({
+        title: "Company Name Required",
+        description: "Please enter your company name.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (isReferrer && !jobTitle.trim()) {
+      toast({
+        title: "Job Title Required",
+        description: "Please enter your job title.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     if (!termsAccepted) {
       toast({
         title: "Terms Required",
         description: "You must accept the terms and conditions to register.",
         variant: "destructive",
       });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    setRegisterAttempted(true);
+    
+    if (!validateInputs()) {
       return;
     }
 
@@ -85,34 +172,7 @@ const Register = () => {
     // For custom company, we'll use the name and create/find it during registration
     let companyValue = company === "others" ? customCompany : company;
     
-    if (isReferrer && company === "others" && !customCompany.trim()) {
-      toast({
-        title: "Company Required",
-        description: "Please enter your company name.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
-      // For new custom companies, ensure it exists in the database before registration
-      if (isReferrer && company === "others" && customCompany.trim()) {
-        // Find or create the company first to get its ID
-        try {
-          const companyId = await companyService.findOrCreateCompanyByName(customCompany.trim());
-          companyValue = companyId; // Use the company ID for registration
-          console.log('Custom company created/found with ID:', companyId);
-        } catch (err) {
-          console.error('Error finding/creating company:', err);
-          toast({
-            title: "Company Error",
-            description: "Failed to create company. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      
       console.log('Submitting registration with company:', companyValue);
       await register({
         first_name: firstName,
@@ -140,9 +200,23 @@ const Register = () => {
       }
       
       navigate("/app");
-    } catch (err) {
-      // Error is handled in auth context
+    } catch (err: any) {
       console.error('Registration error:', err);
+      
+      // Handle specific errors
+      if (err.message.includes('already registered')) {
+        toast({
+          title: "Email Already Registered",
+          description: "This email is already in use. Try logging in instead.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: err.message || "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -229,6 +303,7 @@ const Register = () => {
                     type="password" 
                     required 
                     value={password}
+                    showPasswordToggle
                     onChange={(e) => {
                       setPassword(e.target.value);
                       clearError();
