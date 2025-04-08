@@ -43,6 +43,9 @@ const Companies = () => {
   const fetchCompanies = async (syncProfiles = true) => {
     setLoading(true);
     try {
+      // First ensure all top companies exist in database
+      await companyService.ensureTopCompaniesExist(topCompanies);
+      
       // First sync company data if requested
       if (syncProfiles) {
         console.log("Syncing profiles with company members...");

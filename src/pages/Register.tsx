@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   Card, 
@@ -20,6 +20,7 @@ import { UserRole } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { topCompanies } from "@/data/topCompanies";
+import { companyService } from "@/services/companyService";
 
 const Register = () => {
   const location = useLocation();
@@ -50,6 +51,15 @@ const Register = () => {
     })),
     { label: "Others", value: "others" }
   ];
+
+  useEffect(() => {
+    // Ensure all top companies exist in database when the component loads
+    const initializeCompanies = async () => {
+      await companyService.ensureTopCompaniesExist(topCompanies);
+    };
+    
+    initializeCompanies();
+  }, []);
 
   const handleCompanyChange = (value: string) => {
     setCompany(value);
