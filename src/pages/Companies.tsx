@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,7 +56,7 @@ const Companies = () => {
 
         if (error) throw error;
         
-        // Handle case where sector might be null by providing a default value
+        // Ensure sector is set to a default value if not present
         const companiesWithDefaultSector = data?.map(company => ({
           ...company,
           sector: company.sector || "Technology" // Default sector if none is specified
