@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
-  const { toast } = useToast();
+  const toast = useToast();
 
   /**
    * Setup authentication state management
@@ -216,34 +216,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           // Step 2: If user is a referrer and provided a company, add them to that company
           if (userData.role === 'referrer' && userData.company) {
-            console.log("Processing company for referrer:", userData.company);
-            
-            // Find or create the company and get its ID
+            console.log("Adding user to company:", userData.company);
             const companyId = await companyService.findOrCreateCompanyByName(userData.company);
-            console.log("Company ID resolved:", companyId);
+            console.log("Company ID:", companyId);
             
-            // Step 3: Update the profile with company ID and job title
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ 
-                company: companyId,
-                job_title: userData.jobTitle || 'Member'
-              })
-              .eq('id', data.user.id);
-              
-            if (updateError) {
-              console.error("Error updating profile with company:", updateError);
-              // Don't fail - we'll try to add company member anyway
-            } else {
-              console.log("Profile updated with company:", companyId);
-            }
-            
-            // Step 4: Add user as company member
             await companyService.addCompanyMember(
               data.user.id, 
               companyId, 
               userData.jobTitle || 'Member'
             );
+
+            // Update the user profile with the correct company ID
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ company: companyId })
+              .eq('id', data.user.id);
+              
+            if (updateError) {
+              console.error("Error updating profile with company:", updateError);
+            }
           }
         } catch (companyError) {
           console.error("Error handling company data:", companyError);
