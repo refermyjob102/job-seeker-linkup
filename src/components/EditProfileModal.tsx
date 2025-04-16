@@ -54,8 +54,6 @@ const EditProfileModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   const [previousCompany, setPreviousCompany] = useState<string | undefined>(undefined);
-  const [showCustomCompany, setShowCustomCompany] = useState(false);
-  const [customCompany, setCustomCompany] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -80,28 +78,8 @@ const EditProfileModal = ({
         open_to_work: profile.open_to_work || false,
       });
       setPreviousCompany(profile.company);
-
-      // Check if current company is not in dropdown and should be treated as custom
-      if (profile.company && !topCompanies.some(c => c.id === profile.company)) {
-        setShowCustomCompany(true);
-        setCustomCompany(profile.company);
-      } else {
-        setShowCustomCompany(false);
-        setCustomCompany("");
-      }
     }
   }, [profile]);
-
-  useEffect(() => {
-    // Ensure all top companies exist in database when the component loads
-    const initializeCompanies = async () => {
-      await companyService.ensureTopCompaniesExist(topCompanies);
-    };
-    
-    if (open) {
-      initializeCompanies();
-    }
-  }, [open]);
 
   const handleInputChange = (name: string, value: string | boolean) => {
     setFormData({
@@ -110,82 +88,35 @@ const EditProfileModal = ({
     });
   };
 
-  const handleCompanyChange = (value: string) => {
-    if (value === "others") {
-      setShowCustomCompany(true);
-      // Keep previous custom company if available
-      setFormData({
-        ...formData,
-        company: customCompany || "",
-      });
-    } else {
-      setShowCustomCompany(false);
-      setFormData({
-        ...formData,
-        company: value,
-      });
-      setCustomCompany("");
-    }
-  };
-
-  const handleCustomCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCustomCompany(value);
-    setFormData({
-      ...formData,
-      company: value,
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Determine final company value
-      let finalCompanyId = formData.company;
-      
-      // If this is a custom company, create or find it first
-      if (showCustomCompany && customCompany) {
-        finalCompanyId = await companyService.findOrCreateCompanyByName(customCompany);
-        
-        // Update formData with the new company ID
-        setFormData(prev => ({
-          ...prev,
-          company: finalCompanyId
-        }));
-      }
-      
       // First call the onSave prop for backward compatibility
-      await onSave({
-        ...formData,
-        company: finalCompanyId
-      });
+      await onSave(formData);
       
       // Then update the profile directly in Supabase if we have a user ID
       if (user?.id) {
         const { error } = await supabase
           .from('profiles')
-          .update({
-            ...formData,
-            company: finalCompanyId
-          })
+          .update(formData)
           .eq('id', user.id);
           
         if (error) throw error;
         
         // Update company membership if company changed
-        if (finalCompanyId !== previousCompany) {
+        if (formData.company !== previousCompany) {
           // If company is set, add user to company_members
-          if (finalCompanyId) {
+          if (formData.company) {
             // Check if user is already a member
-            const isMember = await companyService.isUserMemberOfCompany(user.id, finalCompanyId);
+            const isMember = await companyService.isUserMemberOfCompany(user.id, formData.company);
             
             if (!isMember) {
               // Add user as member with job title and department from profile
               await companyService.addCompanyMember(
                 user.id,
-                finalCompanyId,
+                formData.company,
                 formData.job_title || 'Member',
                 formData.department
               );
@@ -193,7 +124,7 @@ const EditProfileModal = ({
           }
           
           // Update previous company for next time
-          setPreviousCompany(finalCompanyId);
+          setPreviousCompany(formData.company);
         }
         
         // Fetch the updated profile to ensure UI is in sync
@@ -220,13 +151,10 @@ const EditProfileModal = ({
   };
 
   // Update to use top companies list
-  const companyOptions = [
-    ...topCompanies.map((company) => ({
-      label: company.name,
-      value: company.id,
-    })),
-    { label: "Others", value: "others" }
-  ];
+  const companyOptions = topCompanies.map((company) => ({
+    label: company.name,
+    value: company.id,
+  }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -337,8 +265,8 @@ const EditProfileModal = ({
               <div>
                 <Label htmlFor="company">Company</Label>
                 <Select 
-                  onValueChange={handleCompanyChange}
-                  value={showCustomCompany ? "others" : formData.company?.toString() || ""}
+                  onValueChange={(value) => handleInputChange("company", value)} 
+                  value={formData.company?.toString() || ""}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a company" />
@@ -349,23 +277,9 @@ const EditProfileModal = ({
                         {company.label}
                       </SelectItem>
                     ))}
-                    <SelectItem value="others">Others</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              {showCustomCompany && (
-                <div>
-                  <Label htmlFor="customCompany">Custom Company Name</Label>
-                  <Input
-                    type="text"
-                    id="customCompany"
-                    value={customCompany}
-                    onChange={handleCustomCompanyChange}
-                    placeholder="Enter company name"
-                  />
-                </div>
-              )}
 
               <div>
                 <Label htmlFor="jobTitle">Job Title</Label>

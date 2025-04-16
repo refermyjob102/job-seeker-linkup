@@ -193,19 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Force sync company memberships to ensure consistency
         if (companyId) {
-          try {
-            // First add user as company member
-            await companyService.addCompanyMember(
-              authData.user.id,
-              companyId,
-              userData.jobTitle || 'Member'
-            );
-            
-            // Then sync all profiles to ensure consistency
-            await companyService.syncProfilesWithCompanyMembers();
-          } catch (err) {
-            console.error('Error syncing company memberships:', err);
-          }
+          await companyService.syncProfilesWithCompanyMembers();
         }
         
         // Fetch updated profile

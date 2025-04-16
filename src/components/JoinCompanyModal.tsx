@@ -57,9 +57,6 @@ const JoinCompanyModal = ({
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        // Make sure all companies are synced before fetching
-        await companyService.syncProfilesWithCompanyMembers();
-        
         const companiesData = await companyService.getAllCompanies();
         setCompanies(companiesData);
       } catch (error) {

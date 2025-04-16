@@ -149,9 +149,6 @@ class CompanyService {
    */
   async getAllCompanies(): Promise<Company[]> {
     try {
-      // First ensure we've synced all profiles with company_members
-      await this.syncProfilesWithCompanyMembers();
-      
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -220,49 +217,44 @@ class CompanyService {
           if (!companyExists) {
             console.log(`Company ${companyId} does not exist, checking if it's a company name`);
             
-            try {
-              // Try to find the company by name
-              const { data: existingCompany } = await supabase
+            // Try to find the company by name
+            const { data: existingCompany } = await supabase
+              .from('companies')
+              .select('id')
+              .ilike('name', companyId)
+              .maybeSingle();
+              
+            if (existingCompany) {
+              companyId = existingCompany.id;
+              console.log(`Found existing company with ID: ${companyId} for name: ${profile.company}`);
+              
+              // Update profile with correct company ID
+              await supabase
+                .from('profiles')
+                .update({ company: companyId })
+                .eq('id', profile.id);
+            } else {
+              // Create new company
+              console.log(`Creating new company with name: ${profile.company}`);
+              const { data: newCompany, error: createError } = await supabase
                 .from('companies')
+                .insert({ name: profile.company })
                 .select('id')
-                .ilike('name', companyId)
-                .maybeSingle();
+                .single();
                 
-              if (existingCompany) {
-                companyId = existingCompany.id;
-                console.log(`Found existing company with ID: ${companyId} for name: ${profile.company}`);
-                
-                // Update profile with correct company ID
-                await supabase
-                  .from('profiles')
-                  .update({ company: companyId })
-                  .eq('id', profile.id);
-              } else {
-                // Create new company
-                console.log(`Creating new company with name: ${profile.company}`);
-                const { data: newCompany, error: createError } = await supabase
-                  .from('companies')
-                  .insert({ name: profile.company })
-                  .select('id')
-                  .single();
-                  
-                if (createError) {
-                  console.error(`Error creating company:`, createError);
-                  continue;
-                }
-                
-                companyId = newCompany.id;
-                console.log(`Created new company with ID: ${companyId} for name: ${profile.company}`);
-                
-                // Update profile with correct company ID
-                await supabase
-                  .from('profiles')
-                  .update({ company: companyId })
-                  .eq('id', profile.id);
+              if (createError) {
+                console.error(`Error creating company:`, createError);
+                continue;
               }
-            } catch (error) {
-              console.error(`Error processing company ID/name: ${profile.company}`, error);
-              continue;
+              
+              companyId = newCompany.id;
+              console.log(`Created new company with ID: ${companyId} for name: ${profile.company}`);
+              
+              // Update profile with correct company ID
+              await supabase
+                .from('profiles')
+                .update({ company: companyId })
+                .eq('id', profile.id);
             }
           }
           
@@ -353,28 +345,6 @@ class CompanyService {
     } catch (error) {
       console.error('Error finding/creating company:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Get or create companies for all companies in the topCompanies list
-   * This ensures that all companies in the dropdown are available in the database
-   */
-  async ensureTopCompaniesExist(topCompanies: Array<{id: string, name: string}>): Promise<void> {
-    try {
-      for (const company of topCompanies) {
-        // Check if company exists by ID
-        const existingCompany = await this.getCompanyById(company.id);
-        
-        if (!existingCompany) {
-          console.log(`Creating company from top list: ${company.name}`);
-          await this.createCompany(company.name);
-        }
-      }
-      
-      console.log('Ensured all top companies exist in database');
-    } catch (error) {
-      console.error('Error ensuring top companies exist:', error);
     }
   }
 }
