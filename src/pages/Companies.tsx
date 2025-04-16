@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { 
   Building, 
   Search, 
-  MapPin, 
   Users, 
   Briefcase, 
   ExternalLink, 
@@ -19,22 +18,66 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { topCompanies } from "@/data/topCompanies";
+import { supabase } from "@/integrations/supabase/client";
+import { seedCompaniesIfNeeded, seedTestReferrersIfNeeded } from "@/integrations/supabase/seed";
+
+// Import types
+import { Company } from "@/types/database";
 
 const Companies = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [companies, setCompanies] = useState(topCompanies);
-  const [filteredCompanies, setFilteredCompanies] = useState(topCompanies);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [view, setView] = useState("grid");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [sectorFilter, setSectorFilter] = useState("all");
   const [hasReferrers, setHasReferrers] = useState(false);
+  const [sectors, setSectors] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const sectors = [...new Set(topCompanies.map(company => company.sector))].sort();
+  useEffect(() => {
+    // Seed companies data if needed
+    const seedData = async () => {
+      await seedCompaniesIfNeeded();
+      await seedTestReferrersIfNeeded();
+      fetchCompanies();
+    };
+    
+    seedData();
+  }, []);
+
+  const fetchCompanies = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch companies
+      const { data: companyData, error } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        console.error('Error fetching companies:', error);
+        return;
+      }
+
+      // Get all unique sectors
+      const uniqueSectors = [...new Set(companyData.map(company => 
+        company.sector || "Uncategorized"
+      ))].sort();
+      
+      setSectors(uniqueSectors);
+      setCompanies(companyData || []);
+      setFilteredCompanies(companyData || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     handleFilterCompanies();
-  }, [sectorFilter, hasReferrers]);
+  }, [sectorFilter, hasReferrers, searchTerm]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +86,13 @@ const Companies = () => {
   };
 
   const handleFilterCompanies = () => {
-    let results = topCompanies;
+    let results = [...companies];
 
     // Apply search term filter
     if (searchTerm) {
       results = results.filter(company => 
         company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.sector.toLowerCase().includes(searchTerm.toLowerCase())
+        (company.sector || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -58,10 +101,10 @@ const Companies = () => {
       results = results.filter(company => company.sector === sectorFilter);
     }
 
-    // Apply referrers filter - in a real application, you would actually filter companies with referrers
-    // For now, let's assume companies with even IDs have referrers
+    // Apply referrers filter - in a real application, we would fetch this data from the database
+    // For now, let's simulate it based on our mechanism
     if (hasReferrers) {
-      results = results.filter(company => parseInt(company.id) % 2 === 0);
+      results = results.filter(company => parseInt(company.id.split("-")[0], 16) % 2 === 0);
     }
 
     setFilteredCompanies(results);
@@ -71,7 +114,7 @@ const Companies = () => {
     setSearchTerm("");
     setSectorFilter("all");
     setHasReferrers(false);
-    setFilteredCompanies(topCompanies);
+    setFilteredCompanies(companies);
   };
 
   return (
@@ -175,7 +218,23 @@ const Companies = () => {
             </Tabs>
           </div>
 
-          {filteredCompanies.length > 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="h-[160px]">
+                  <CardContent className="p-6 animate-pulse">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-muted rounded-md h-12 w-12"></div>
+                      <div className="space-y-2 flex-1">
+                        <div className="h-5 bg-muted rounded w-3/4"></div>
+                        <div className="h-4 bg-muted rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredCompanies.length > 0 ? (
             <>
               {view === "grid" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -184,19 +243,32 @@ const Companies = () => {
                       <CardHeader className="pb-3">
                         <div className="flex items-center gap-4">
                           <div className="bg-muted rounded-md p-3 h-12 w-12 flex items-center justify-center">
-                            <Building className="h-6 w-6 text-muted-foreground" />
+                            {company.logo_url ? (
+                              <img 
+                                src={company.logo_url} 
+                                alt={company.name} 
+                                className="h-6 w-6 object-contain"
+                              />
+                            ) : (
+                              <Building className="h-6 w-6 text-muted-foreground" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <CardTitle className="text-lg truncate">{company.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground truncate">{company.sector}</p>
+                            <p className="text-sm text-muted-foreground truncate">{company.sector || 'Technology'}</p>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent className="flex-1">
                         <div className="space-y-3 text-sm">
                           <div className="flex items-start text-muted-foreground">
-                            <Badge variant="outline">{company.sector}</Badge>
+                            <Badge variant="outline">{company.sector || 'Technology'}</Badge>
                           </div>
+                          {company.location && (
+                            <div className="flex items-start gap-2 text-muted-foreground">
+                              <span className="truncate">{company.location}</span>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                       <CardFooter className="border-t bg-muted/50 p-3">
@@ -204,11 +276,20 @@ const Companies = () => {
                           <Link to={`/app/companies/${company.id}`}>
                             <Button variant="outline" size="sm">View Members</Button>
                           </Link>
-                          <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-                            <a href={`https://www.google.com/search?q=${encodeURIComponent(company.name)}`} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
+                          {company.website && (
+                            <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+                              <a href={company.website} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                          {!company.website && (
+                            <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+                              <a href={`https://www.google.com/search?q=${encodeURIComponent(company.name)}`} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </CardFooter>
                     </Card>
@@ -221,22 +302,35 @@ const Companies = () => {
                       <CardContent className="p-4 sm:p-6">
                         <div className="flex flex-col md:flex-row gap-4">
                           <div className="bg-muted flex items-center justify-center p-4 rounded-md h-16 w-16 mx-auto md:mx-0">
-                            <Building className="h-8 w-8 text-muted-foreground" />
+                            {company.logo_url ? (
+                              <img 
+                                src={company.logo_url} 
+                                alt={company.name} 
+                                className="h-8 w-8 object-contain" 
+                              />
+                            ) : (
+                              <Building className="h-8 w-8 text-muted-foreground" />
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2 text-center md:text-left">
                               <h3 className="font-semibold text-lg">{company.name}</h3>
-                              <Badge variant="outline">{company.sector}</Badge>
+                              <Badge variant="outline">{company.sector || 'Technology'}</Badge>
                             </div>
                             <div className="flex flex-wrap justify-center md:justify-start gap-y-2 gap-x-4 mb-4 text-sm text-muted-foreground">
                               {/* In a real application, these would come from actual data */}
                               <div className="flex items-center">
                                 <Users className="h-4 w-4 mr-1" />
-                                {parseInt(company.id) % 2 === 0 ? "Has referrers" : "No referrers yet"}
+                                {parseInt(company.id.split("-")[0], 16) % 2 === 0 ? "Has referrers" : "No referrers yet"}
                               </div>
+                              {company.location && (
+                                <div className="flex items-center">
+                                  <span className="mr-1">{company.location}</span>
+                                </div>
+                              )}
                               <div className="flex items-center">
                                 <Briefcase className="h-4 w-4 mr-1" />
-                                {company.id.length} open positions
+                                {parseInt(company.id.split("-")[1] || "0", 16) % 10} open positions
                               </div>
                             </div>
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-2">

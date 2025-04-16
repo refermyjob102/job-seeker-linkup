@@ -53,6 +53,32 @@ const EditProfileModal = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
+  const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
+  const [showCustomCompany, setShowCustomCompany] = useState(false);
+  const [customCompany, setCustomCompany] = useState("");
+
+  useEffect(() => {
+    // Fetch companies from the database
+    const fetchCompanies = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name')
+          .order('name');
+          
+        if (error) {
+          console.error('Error fetching companies:', error);
+          return;
+        }
+        
+        setCompanies(data || []);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+      }
+    };
+    
+    fetchCompanies();
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -76,8 +102,17 @@ const EditProfileModal = ({
         available_for_referrals: profile.available_for_referrals || false,
         open_to_work: profile.open_to_work || false,
       });
+
+      // Check if the company is in our list or if it's a custom one
+      if (profile.company) {
+        const companyExists = companies.some(c => c.id === profile.company);
+        if (!companyExists) {
+          setShowCustomCompany(true);
+          setCustomCompany(profile.company);
+        }
+      }
     }
-  }, [profile]);
+  }, [profile, companies]);
 
   const handleInputChange = (name: string, value: string | boolean) => {
     setFormData({
@@ -86,19 +121,67 @@ const EditProfileModal = ({
     });
   };
 
+  const handleCompanyChange = async (value: string) => {
+    if (value === "other") {
+      setShowCustomCompany(true);
+      handleInputChange("company", "");
+    } else {
+      setShowCustomCompany(false);
+      handleInputChange("company", value);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
+      let finalCompanyId = formData.company;
+      
+      // If user entered a custom company, create it first
+      if (showCustomCompany && customCompany.trim()) {
+        // Check if the company already exists with the same name
+        const { data: existingCompany } = await supabase
+          .from('companies')
+          .select('id')
+          .ilike('name', customCompany.trim())
+          .single();
+          
+        if (existingCompany) {
+          finalCompanyId = existingCompany.id;
+        } else {
+          // Create new company
+          const { data: newCompany, error: companyError } = await supabase
+            .from('companies')
+            .insert({
+              name: customCompany.trim()
+            })
+            .select('id')
+            .single();
+            
+          if (companyError) {
+            throw new Error(`Error creating company: ${companyError.message}`);
+          }
+          
+          if (newCompany) {
+            finalCompanyId = newCompany.id;
+          }
+        }
+      }
+      
+      const dataToUpdate = {
+        ...formData,
+        company: finalCompanyId
+      };
+      
       // First call the onSave prop for backward compatibility
-      await onSave(formData);
+      await onSave(dataToUpdate);
       
       // Then update the profile directly in Supabase if we have a user ID
       if (user?.id) {
         const { error } = await supabase
           .from('profiles')
-          .update(formData)
+          .update(dataToUpdate)
           .eq('id', user.id);
           
         if (error) throw error;
@@ -125,12 +208,6 @@ const EditProfileModal = ({
       setIsSubmitting(false);
     }
   };
-
-  // Update to use top companies list
-  const companyOptions = topCompanies.map((company) => ({
-    label: company.name,
-    value: company.id,
-  }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,26 +266,24 @@ const EditProfileModal = ({
               </div>
 
               <div>
-                <Label htmlFor="bio">Bio*</Label>
+                <Label htmlFor="bio">Bio</Label>
                 <Textarea
                   id="bio"
-                  value={formData.bio}
+                  value={formData.bio || ""}
                   onChange={(e) => handleInputChange("bio", e.target.value)}
                   placeholder="Tell us a bit about yourself"
                   rows={4}
-                  required
                 />
               </div>
 
               <div>
-                <Label htmlFor="location">Location*</Label>
+                <Label htmlFor="location">Location</Label>
                 <Input
                   type="text"
                   id="location"
-                  value={formData.location}
+                  value={formData.location || ""}
                   onChange={(e) => handleInputChange("location", e.target.value)}
                   placeholder="Your city, state, or country"
-                  required
                 />
               </div>
 
@@ -217,7 +292,7 @@ const EditProfileModal = ({
                 <Input
                   type="text"
                   id="interests"
-                  value={formData.interests}
+                  value={formData.interests || ""}
                   onChange={(e) => handleInputChange("interests", e.target.value)}
                   placeholder="Separate interests with commas"
                 />
@@ -230,7 +305,7 @@ const EditProfileModal = ({
                 </div>
                 <Switch
                   id="openToWork"
-                  checked={formData.open_to_work}
+                  checked={formData.open_to_work || false}
                   onCheckedChange={(checked) => handleInputChange("open_to_work", checked)}
                 />
               </div>
@@ -241,28 +316,42 @@ const EditProfileModal = ({
               <div>
                 <Label htmlFor="company">Company</Label>
                 <Select 
-                  onValueChange={(value) => handleInputChange("company", value)} 
-                  value={formData.company?.toString() || ""}
+                  onValueChange={handleCompanyChange} 
+                  value={showCustomCompany ? "other" : (formData.company || "")}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a company" />
                   </SelectTrigger>
                   <SelectContent>
-                    {companyOptions.map((company) => (
-                      <SelectItem key={company.value} value={company.value}>
-                        {company.label}
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
                       </SelectItem>
                     ))}
+                    <SelectItem value="other">Other (specify)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {showCustomCompany && (
+                <div>
+                  <Label htmlFor="customCompany">Company Name</Label>
+                  <Input
+                    type="text"
+                    id="customCompany"
+                    value={customCompany}
+                    onChange={(e) => setCustomCompany(e.target.value)}
+                    placeholder="Enter company name"
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="jobTitle">Job Title</Label>
                 <Input
                   type="text"
                   id="jobTitle"
-                  value={formData.job_title}
+                  value={formData.job_title || ""}
                   onChange={(e) => handleInputChange("job_title", e.target.value)}
                   placeholder="Your current job title"
                 />
@@ -273,7 +362,7 @@ const EditProfileModal = ({
                 <Input
                   type="text"
                   id="department"
-                  value={formData.department}
+                  value={formData.department || ""}
                   onChange={(e) => handleInputChange("department", e.target.value)}
                   placeholder="Your department"
                 />
@@ -284,7 +373,7 @@ const EditProfileModal = ({
                 <Input
                   type="text"
                   id="yearsExperience"
-                  value={formData.years_experience}
+                  value={formData.years_experience || ""}
                   onChange={(e) => handleInputChange("years_experience", e.target.value)}
                   placeholder="How many years of experience do you have?"
                 />
@@ -297,7 +386,7 @@ const EditProfileModal = ({
                 </div>
                 <Switch
                   id="availableForReferrals"
-                  checked={formData.available_for_referrals}
+                  checked={formData.available_for_referrals || false}
                   onCheckedChange={(checked) => handleInputChange("available_for_referrals", checked)}
                 />
               </div>
@@ -309,7 +398,7 @@ const EditProfileModal = ({
                 <Label htmlFor="skills">Skills</Label>
                 <Textarea
                   id="skills"
-                  value={formData.skills}
+                  value={formData.skills || ""}
                   onChange={(e) => handleInputChange("skills", e.target.value)}
                   placeholder="Separate skills with commas (e.g., React, JavaScript, Project Management)"
                 />
@@ -319,7 +408,7 @@ const EditProfileModal = ({
                 <Label htmlFor="education">Education</Label>
                 <Textarea
                   id="education"
-                  value={formData.education}
+                  value={formData.education || ""}
                   onChange={(e) => handleInputChange("education", e.target.value)}
                   placeholder="Your educational background"
                   rows={3}
@@ -331,7 +420,7 @@ const EditProfileModal = ({
                 <Input
                   type="text"
                   id="languages"
-                  value={formData.languages}
+                  value={formData.languages || ""}
                   onChange={(e) => handleInputChange("languages", e.target.value)}
                   placeholder="Languages you speak (e.g., English, Spanish, French)"
                 />
@@ -345,7 +434,7 @@ const EditProfileModal = ({
                 <Input
                   type="url"
                   id="linkedinUrl"
-                  value={formData.linkedin_url}
+                  value={formData.linkedin_url || ""}
                   onChange={(e) => handleInputChange("linkedin_url", e.target.value)}
                   placeholder="Your LinkedIn profile URL"
                 />
@@ -356,7 +445,7 @@ const EditProfileModal = ({
                 <Input
                   type="url"
                   id="githubUrl"
-                  value={formData.github_url}
+                  value={formData.github_url || ""}
                   onChange={(e) => handleInputChange("github_url", e.target.value)}
                   placeholder="Your GitHub profile URL"
                 />
@@ -367,7 +456,7 @@ const EditProfileModal = ({
                 <Input
                   type="url"
                   id="twitterUrl"
-                  value={formData.twitter_url}
+                  value={formData.twitter_url || ""}
                   onChange={(e) => handleInputChange("twitter_url", e.target.value)}
                   placeholder="Your Twitter profile URL"
                 />
@@ -378,7 +467,7 @@ const EditProfileModal = ({
                 <Input
                   type="url"
                   id="websiteUrl"
-                  value={formData.website_url}
+                  value={formData.website_url || ""}
                   onChange={(e) => handleInputChange("website_url", e.target.value)}
                   placeholder="Your personal website URL"
                 />

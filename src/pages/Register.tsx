@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   Card, 
@@ -11,13 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Briefcase, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { topCompanies } from "@/data/topCompanies";
 
 const Register = () => {
   const location = useLocation();
@@ -33,10 +36,37 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [company, setCompany] = useState("");
+  const [companyOptions, setCompanyOptions] = useState<{id: string, name: string}[]>([]);
+  const [customCompany, setCustomCompany] = useState("");
+  const [showCustomCompany, setShowCustomCompany] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   
   const isReferrer = role === "referrer";
+
+  useEffect(() => {
+    // Fetch companies from the database
+    const fetchCompanies = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name')
+          .order('name');
+          
+        if (error) {
+          console.error('Error fetching companies:', error);
+          return;
+        }
+        
+        // Add the companies from the database
+        setCompanyOptions(data || []);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+      }
+    };
+    
+    fetchCompanies();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,12 +81,45 @@ const Register = () => {
     }
     
     try {
+      // If user selected "other" and entered a custom company, create it first
+      let finalCompanyId = company;
+      
+      if (isReferrer && company === "other" && customCompany.trim()) {
+        // Check if the company already exists with the same name
+        const { data: existingCompany } = await supabase
+          .from('companies')
+          .select('id')
+          .ilike('name', customCompany.trim())
+          .single();
+          
+        if (existingCompany) {
+          finalCompanyId = existingCompany.id;
+        } else {
+          // Create new company
+          const { data: newCompany, error: companyError } = await supabase
+            .from('companies')
+            .insert({
+              name: customCompany.trim()
+            })
+            .select('id')
+            .single();
+            
+          if (companyError) {
+            throw new Error(`Error creating company: ${companyError.message}`);
+          }
+          
+          if (newCompany) {
+            finalCompanyId = newCompany.id;
+          }
+        }
+      }
+      
       await register({
         first_name: firstName,
         last_name: lastName,
         email,
         role,
-        company: isReferrer ? company : undefined,
+        company: isReferrer ? finalCompanyId : undefined,
         jobTitle: isReferrer ? jobTitle : undefined,
       }, password);
       
@@ -70,6 +133,11 @@ const Register = () => {
     } catch (err) {
       // Error is handled in auth context
     }
+  };
+
+  const handleCompanyChange = (value: string) => {
+    setCompany(value);
+    setShowCustomCompany(value === "other");
   };
 
   return (
@@ -159,7 +227,6 @@ const Register = () => {
                       setPassword(e.target.value);
                       clearError();
                     }}
-                    showPasswordToggle
                   />
                 </div>
                 
@@ -167,14 +234,37 @@ const Register = () => {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="company">Company</Label>
-                      <Input 
-                        id="company" 
-                        placeholder="Google, Meta, etc." 
-                        required={isReferrer} 
-                        value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                      />
+                      <Select 
+                        value={company} 
+                        onValueChange={handleCompanyChange}
+                        required={isReferrer}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companyOptions.map((comp) => (
+                            <SelectItem key={comp.id} value={comp.id}>
+                              {comp.name}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="other">Other (specify)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+                    
+                    {showCustomCompany && (
+                      <div className="space-y-2">
+                        <Label htmlFor="customCompany">Company Name</Label>
+                        <Input 
+                          id="customCompany" 
+                          placeholder="Enter company name" 
+                          required={isReferrer && showCustomCompany} 
+                          value={customCompany}
+                          onChange={(e) => setCustomCompany(e.target.value)}
+                        />
+                      </div>
+                    )}
                     
                     <div className="space-y-2">
                       <Label htmlFor="jobTitle">Job Title</Label>
@@ -199,11 +289,11 @@ const Register = () => {
                   />
                   <Label htmlFor="terms" className="text-sm">
                     I agree to the{" "}
-                    <Link to="#" className="text-primary hover:underline">
+                    <Link to="/terms" className="text-primary hover:underline">
                       Terms of Service
                     </Link>{" "}
                     and{" "}
-                    <Link to="#" className="text-primary hover:underline">
+                    <Link to="/privacy" className="text-primary hover:underline">
                       Privacy Policy
                     </Link>
                   </Label>
