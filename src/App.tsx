@@ -1,3 +1,5 @@
+
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -41,59 +43,65 @@ import ProtectedRoute from "./components/ProtectedRoute";
 // Add the ResetPassword import
 import ResetPassword from "./pages/ResetPassword";
 
-const queryClient = new QueryClient();
+// Create QueryClient instance inside the component
+const App = () => {
+  // Create a new QueryClient instance inside the component
+  const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/browse-jobs" element={<BrowseJobs />} />
-            <Route path="/success-stories" element={<SuccessStories />} />
-            <Route path="/why-refer" element={<WhyRefer />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/partners" element={<Partners />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/cookies" element={<Cookies />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:id" element={<BlogPost />} />
-            
-            {/* Protected routes with DashboardLayout */}
-            <Route path="/app" element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="jobs" element={<JobListings />} />
-              <Route path="jobs/:id" element={<JobDetails />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="companies" element={<Companies />} />
-              <Route path="companies/:id" element={<CompanyMembers />} />
-              <Route path="members/:id" element={<MemberProfile />} />
-              <Route path="chat" element={<Chat />} />
-              <Route path="chat/:id" element={<Chat />} />
-              <Route path="referrals" element={<Referrals />} />
-              <Route path="notifications" element={<Notifications />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+  return (
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route path="/browse-jobs" element={<BrowseJobs />} />
+                <Route path="/success-stories" element={<SuccessStories />} />
+                <Route path="/why-refer" element={<WhyRefer />} />
+                <Route path="/rewards" element={<Rewards />} />
+                <Route path="/partners" element={<Partners />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/cookies" element={<Cookies />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogPost />} />
+                
+                {/* Protected routes with DashboardLayout */}
+                <Route path="/app" element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Dashboard />} />
+                  <Route path="jobs" element={<JobListings />} />
+                  <Route path="jobs/:id" element={<JobDetails />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="companies" element={<Companies />} />
+                  <Route path="companies/:id" element={<CompanyMembers />} />
+                  <Route path="members/:id" element={<MemberProfile />} />
+                  <Route path="chat" element={<Chat />} />
+                  <Route path="chat/:id" element={<Chat />} />
+                  <Route path="referrals" element={<Referrals />} />
+                  <Route path="notifications" element={<Notifications />} />
+                </Route>
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+};
 
 export default App;
