@@ -8,8 +8,7 @@ import {
   Briefcase, 
   ExternalLink, 
   Filter,
-  ChevronDown,
-  RefreshCw
+  ChevronDown
 } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,63 +34,55 @@ const Companies = () => {
   const [sectorFilter, setSectorFilter] = useState("all");
   const [hasReferrers, setHasReferrers] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   
   // Get unique sectors from companies
   const [sectors, setSectors] = useState<string[]>([]);
 
-  const fetchCompanies = async (syncProfiles = true) => {
-    setLoading(true);
-    try {
-      // First sync company data if requested
-      if (syncProfiles) {
-        console.log("Syncing profiles with company members...");
-        setSyncing(true);
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setLoading(true);
+      try {
+        // First sync company data
         await companyService.syncProfilesWithCompanyMembers();
-        setSyncing(false);
-      }
-      
-      // Try to get companies from Supabase
-      const dbCompanies = await companyService.getAllCompanies();
-      
-      if (dbCompanies.length > 0) {
-        console.log("Fetched companies:", dbCompanies);
-        setCompanies(dbCompanies);
-        setFilteredCompanies(dbCompanies);
         
-        // Extract sectors from companies
-        const uniqueSectors = [...new Set(dbCompanies.map(company => 
-          company.description?.split(',')[0] || 'Technology'
-        ))].sort();
+        // Try to get companies from Supabase
+        const dbCompanies = await companyService.getAllCompanies();
         
-        setSectors(uniqueSectors);
-      } else {
+        if (dbCompanies.length > 0) {
+          setCompanies(dbCompanies);
+          setFilteredCompanies(dbCompanies);
+          
+          // Extract sectors from companies
+          const uniqueSectors = [...new Set(dbCompanies.map(company => 
+            company.description?.split(',')[0] || 'Technology'
+          ))].sort();
+          
+          setSectors(uniqueSectors);
+        } else {
+          // Fallback to mock data
+          setCompanies(topCompanies as unknown as Company[]);
+          setFilteredCompanies(topCompanies as unknown as Company[]);
+          
+          // Extract sectors from mock companies
+          const mockSectors = [...new Set(topCompanies.map(company => company.sector))].sort();
+          setSectors(mockSectors);
+        }
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load companies. Please try again later.",
+          variant: "destructive",
+        });
+        
         // Fallback to mock data
-        console.log("No companies found, using mock data");
         setCompanies(topCompanies as unknown as Company[]);
         setFilteredCompanies(topCompanies as unknown as Company[]);
-        
-        // Extract sectors from mock companies
-        const mockSectors = [...new Set(topCompanies.map(company => company.sector))].sort();
-        setSectors(mockSectors);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load companies. Please try again later.",
-        variant: "destructive",
-      });
-      
-      // Fallback to mock data
-      setCompanies(topCompanies as unknown as Company[]);
-      setFilteredCompanies(topCompanies as unknown as Company[]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
+    };
+    
     fetchCompanies();
   }, [toast]);
 
@@ -103,28 +94,6 @@ const Companies = () => {
     e.preventDefault();
     handleFilterCompanies();
     setMobileFiltersOpen(false);
-  };
-
-  const handleSyncCompanies = async () => {
-    setSyncing(true);
-    try {
-      await companyService.syncProfilesWithCompanyMembers();
-      fetchCompanies(false);
-      toast({
-        title: "Success",
-        description: "Company data synchronized successfully.",
-        variant: "default",
-      });
-    } catch (error) {
-      console.error("Error syncing companies:", error);
-      toast({
-        title: "Error",
-        description: "Failed to synchronize company data.",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncing(false);
-    }
   };
 
   const handleFilterCompanies = () => {
@@ -205,17 +174,6 @@ const Companies = () => {
             Explore companies and find referrers who work there
           </p>
         </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleSyncCompanies} 
-          disabled={syncing}
-          className="w-full md:w-auto"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? "Syncing..." : "Sync Companies"}
-        </Button>
       </div>
 
       {/* Mobile Filters Button */}
