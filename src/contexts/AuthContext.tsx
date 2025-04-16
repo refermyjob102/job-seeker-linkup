@@ -3,11 +3,13 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
 import { useToast } from '@/components/ui/use-toast';
+import { Session } from '@supabase/supabase-js';
 
 export type UserRole = 'seeker' | 'referrer';
 
 interface AuthContextType {
   user: Profile | null;
+  session: Session | null; // Added to track the session
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -32,28 +34,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null); // Added to track the session
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
+    // Set up auth state listener FIRST to prevent missing auth events
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session); // Store the full session
       if (session?.user) {
         fetchProfile(session.user.id);
       } else {
         setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session); // Store the full session
+      if (session?.user) {
+        fetchProfile(session.user.id);
       }
       setIsLoading(false);
     });
@@ -70,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) throw error;
+      
       // Ensure the role is cast to the correct type
       if (data && (data.role === 'seeker' || data.role === 'referrer')) {
         setUser(data as Profile);
@@ -166,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (data.user) {
+        setSession(data.session); // Store the full session
         await fetchProfile(data.user.id);
       }
     } catch (err) {
@@ -185,6 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       setUser(null);
+      setSession(null); // Clear the session
     } catch (err) {
       console.error('Logout error:', err);
       toast({
@@ -199,7 +207,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
+      user,
+      session, // Added to the context
       isLoading, 
       error, 
       login, 

@@ -1,380 +1,245 @@
 
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { 
-  Building, 
-  Search, 
-  Users, 
-  Briefcase, 
-  ExternalLink, 
-  Filter,
-  ChevronDown
-} from "lucide-react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Building, Filter, Search, MapPin, Link, Briefcase, Users2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { seedCompaniesIfNeeded, seedTestReferrersIfNeeded } from "@/integrations/supabase/seed";
-
-// Import types
 import { Company } from "@/types/database";
 
 const Companies = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
-  const [view, setView] = useState("grid");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [sectorFilter, setSectorFilter] = useState("all");
-  const [hasReferrers, setHasReferrers] = useState(false);
-  const [sectors, setSectors] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterSector, setFilterSector] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Sectors for filtering
+  const sectors = [
+    "All Sectors",
+    "Technology",
+    "Finance",
+    "Healthcare",
+    "Retail",
+    "Manufacturing",
+    "Education",
+    "Transportation",
+    "Energy",
+    "Media",
+  ];
+
+  // Fetch companies from Supabase
   useEffect(() => {
-    // Seed companies data if needed
-    const seedData = async () => {
-      await seedCompaniesIfNeeded();
-      await seedTestReferrersIfNeeded();
-      fetchCompanies();
+    const fetchCompanies = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("companies")
+          .select("*")
+          .order("name");
+
+        if (error) throw error;
+        
+        // Handle case where sector might be null by providing a default value
+        const companiesWithDefaultSector = data?.map(company => ({
+          ...company,
+          sector: company.sector || "Technology" // Default sector if none is specified
+        })) || [];
+        
+        setCompanies(companiesWithDefaultSector as Company[]);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching companies:", err);
+        setError("Failed to load companies. Please try again later.");
+        setLoading(false);
+      }
     };
-    
-    seedData();
+
+    fetchCompanies();
   }, []);
 
-  const fetchCompanies = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch companies
-      const { data: companyData, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('name');
-        
-      if (error) {
-        console.error('Error fetching companies:', error);
-        return;
-      }
+  // Filter companies by search query and sector
+  const filteredCompanies = companies.filter((company) => {
+    const matchesSearch =
+      company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (company.description &&
+        company.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // Get all unique sectors
-      const uniqueSectors = [...new Set(companyData.map(company => 
-        company.sector || "Uncategorized"
-      ))].sort();
-      
-      setSectors(uniqueSectors);
-      setCompanies(companyData || []);
-      setFilteredCompanies(companyData || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    const matchesSector =
+      filterSector === "all" || 
+      (company.sector && company.sector.toLowerCase() === filterSector.toLowerCase());
+
+    return matchesSearch && matchesSector;
+  });
+
+  // Get random color for sector badges
+  const getSectorColor = (sector: string): string => {
+    const colors = [
+      "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+      "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+      "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300",
+      "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300",
+    ];
+
+    // Use the sector name to deterministically choose a color
+    const index = sector.length % colors.length;
+    return colors[index];
   };
 
-  useEffect(() => {
-    handleFilterCompanies();
-  }, [sectorFilter, hasReferrers, searchTerm]);
+  // Handle loading and error states
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleFilterCompanies();
-    setMobileFiltersOpen(false);
-  };
-
-  const handleFilterCompanies = () => {
-    let results = [...companies];
-
-    // Apply search term filter
-    if (searchTerm) {
-      results = results.filter(company => 
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (company.sector || "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Apply sector filter
-    if (sectorFilter !== "all") {
-      results = results.filter(company => company.sector === sectorFilter);
-    }
-
-    // Apply referrers filter - in a real application, we would fetch this data from the database
-    // For now, let's simulate it based on our mechanism
-    if (hasReferrers) {
-      results = results.filter(company => parseInt(company.id.split("-")[0], 16) % 2 === 0);
-    }
-
-    setFilteredCompanies(results);
-  };
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setSectorFilter("all");
-    setHasReferrers(false);
-    setFilteredCompanies(companies);
-  };
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <h2 className="text-xl font-bold mb-2">Error</h2>
+            <p className="text-muted-foreground">{error}</p>
+            <Button className="mt-4" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">Companies</h1>
-          <p className="text-muted-foreground">
-            Explore companies and find referrers who work there
-          </p>
+    <div className="container mx-auto py-8 px-4">
+      <h1 className="text-3xl font-bold tracking-tight mb-8">Browse Companies</h1>
+
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            className="pl-10"
+            placeholder="Search companies..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-      </div>
-
-      {/* Mobile Filters Button */}
-      <div className="md:hidden">
-        <Button 
-          variant="outline" 
-          className="w-full" 
-          onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          Filters
-          <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${mobileFiltersOpen ? 'rotate-180' : ''}`} />
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Filters - Desktop */}
-        <Card className={`md:col-span-1 h-fit ${mobileFiltersOpen ? 'block' : 'hidden md:block'}`}>
-          <CardContent className="p-4 sm:p-6">
-            <form onSubmit={handleSearch} className="space-y-4 sm:space-y-6">
-              <div className="space-y-3">
-                <h3 className="font-medium">Search</h3>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Company name, industry..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
+        <div className="w-full md:w-64">
+          <Select
+            value={filterSector}
+            onValueChange={(value) => setFilterSector(value)}
+          >
+            <SelectTrigger className="w-full">
+              <div className="flex items-center">
+                <Filter className="mr-2 h-4 w-4" />
+                <span>Filter by Sector</span>
               </div>
-
-              <div className="space-y-3">
-                <h3 className="font-medium">Industry / Sector</h3>
-                <Select 
-                  value={sectorFilter} 
-                  onValueChange={setSectorFilter}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select industry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Industries</SelectItem>
-                    {sectors.map((sector) => (
-                      <SelectItem key={sector} value={sector}>
-                        {sector}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-medium">Referrers</h3>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="hasReferrers" 
-                    checked={hasReferrers} 
-                    onCheckedChange={(checked) => setHasReferrers(checked === true)}
-                  />
-                  <Label htmlFor="hasReferrers">Has available referrers</Label>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
-                  Apply Filters
-                </Button>
-                <Button type="button" variant="outline" onClick={clearFilters}>
-                  Clear
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Content Area */}
-        <div className="md:col-span-3">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-sm text-muted-foreground">
-              {filteredCompanies.length} {filteredCompanies.length === 1 ? 'company' : 'companies'} found
-            </div>
-            <Tabs value={view} onValueChange={setView} className="w-[200px]">
-              <TabsList className="grid grid-cols-2">
-                <TabsTrigger value="grid">Grid</TabsTrigger>
-                <TabsTrigger value="list">List</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i} className="h-[160px]">
-                  <CardContent className="p-6 animate-pulse">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-muted rounded-md h-12 w-12"></div>
-                      <div className="space-y-2 flex-1">
-                        <div className="h-5 bg-muted rounded w-3/4"></div>
-                        <div className="h-4 bg-muted rounded w-1/2"></div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sectors</SelectItem>
+              {sectors.slice(1).map((sector) => (
+                <SelectItem key={sector} value={sector.toLowerCase()}>
+                  {sector}
+                </SelectItem>
               ))}
-            </div>
-          ) : filteredCompanies.length > 0 ? (
-            <>
-              {view === "grid" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredCompanies.map((company) => (
-                    <Card key={company.id} className="overflow-hidden h-full flex flex-col">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center gap-4">
-                          <div className="bg-muted rounded-md p-3 h-12 w-12 flex items-center justify-center">
-                            {company.logo_url ? (
-                              <img 
-                                src={company.logo_url} 
-                                alt={company.name} 
-                                className="h-6 w-6 object-contain"
-                              />
-                            ) : (
-                              <Building className="h-6 w-6 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-lg truncate">{company.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground truncate">{company.sector || 'Technology'}</p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex-1">
-                        <div className="space-y-3 text-sm">
-                          <div className="flex items-start text-muted-foreground">
-                            <Badge variant="outline">{company.sector || 'Technology'}</Badge>
-                          </div>
-                          {company.location && (
-                            <div className="flex items-start gap-2 text-muted-foreground">
-                              <span className="truncate">{company.location}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                      <CardFooter className="border-t bg-muted/50 p-3">
-                        <div className="flex justify-between w-full">
-                          <Link to={`/app/companies/${company.id}`}>
-                            <Button variant="outline" size="sm">View Members</Button>
-                          </Link>
-                          {company.website && (
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-                              <a href={company.website} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {!company.website && (
-                            <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-                              <a href={`https://www.google.com/search?q=${encodeURIComponent(company.name)}`} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredCompanies.map((company) => (
-                    <Card key={company.id}>
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col md:flex-row gap-4">
-                          <div className="bg-muted flex items-center justify-center p-4 rounded-md h-16 w-16 mx-auto md:mx-0">
-                            {company.logo_url ? (
-                              <img 
-                                src={company.logo_url} 
-                                alt={company.name} 
-                                className="h-8 w-8 object-contain" 
-                              />
-                            ) : (
-                              <Building className="h-8 w-8 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2 text-center md:text-left">
-                              <h3 className="font-semibold text-lg">{company.name}</h3>
-                              <Badge variant="outline">{company.sector || 'Technology'}</Badge>
-                            </div>
-                            <div className="flex flex-wrap justify-center md:justify-start gap-y-2 gap-x-4 mb-4 text-sm text-muted-foreground">
-                              {/* In a real application, these would come from actual data */}
-                              <div className="flex items-center">
-                                <Users className="h-4 w-4 mr-1" />
-                                {parseInt(company.id.split("-")[0], 16) % 2 === 0 ? "Has referrers" : "No referrers yet"}
-                              </div>
-                              {company.location && (
-                                <div className="flex items-center">
-                                  <span className="mr-1">{company.location}</span>
-                                </div>
-                              )}
-                              <div className="flex items-center">
-                                <Briefcase className="h-4 w-4 mr-1" />
-                                {parseInt(company.id.split("-")[1] || "0", 16) % 10} open positions
-                              </div>
-                            </div>
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-                              <div className="flex gap-2 w-full sm:w-auto">
-                                <Button 
-                                  variant="outline" 
-                                  className="flex-1 sm:flex-initial" 
-                                  asChild
-                                >
-                                  <Link to={`/app/companies/${company.id}`}>
-                                    View Members
-                                  </Link>
-                                </Button>
-                                <Button 
-                                  className="flex-1 sm:flex-initial"
-                                  asChild
-                                >
-                                  <Link to={`/app/jobs?company=${encodeURIComponent(company.name)}`}>
-                                    View Jobs
-                                  </Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-16">
-              <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No companies found</h3>
-              <p className="text-muted-foreground mb-4">
-                Try adjusting your search or filter criteria
-              </p>
-              <Button onClick={clearFilters}>
-                Reset Filters
-              </Button>
-            </div>
-          )}
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      {/* Company Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredCompanies.length > 0 ? (
+          filteredCompanies.map((company) => (
+            <Card key={company.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-4">
+                <div className="flex items-start">
+                  <Avatar className="h-12 w-12 mr-4">
+                    <AvatarImage src={company.logo_url || ""} alt={company.name} />
+                    <AvatarFallback className="bg-primary/10">
+                      {company.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <CardTitle className="text-xl">{company.name}</CardTitle>
+                    <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                      {company.location && (
+                        <div className="flex items-center mr-4">
+                          <MapPin className="h-3.5 w-3.5 mr-1" />
+                          <span>{company.location}</span>
+                        </div>
+                      )}
+                      {company.sector && (
+                        <Badge className={getSectorColor(company.sector)}>
+                          {company.sector}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <p className="text-muted-foreground text-sm line-clamp-3">
+                  {company.description ||
+                    `${company.name} is a leading company in the ${
+                      company.sector || "technology"
+                    } sector.`}
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0 flex justify-between items-center">
+                <div className="flex items-center text-sm">
+                  <Users2 className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                  <span>View team members</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-primary/10"
+                  onClick={() => navigate(`/app/companies/${company.id}`)}
+                >
+                  View Company
+                </Button>
+              </CardFooter>
+            </Card>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12">
+            <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No companies found</h3>
+            <p className="text-muted-foreground mb-6">
+              Try adjusting your search or filter criteria.
+            </p>
+            <Button onClick={() => {
+              setSearchQuery("");
+              setFilterSector("all");
+            }}>
+              Reset Filters
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
