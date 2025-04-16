@@ -26,9 +26,6 @@ class CompanyService {
 
   /**
    * Get members of a company with their profiles
-   * 
-   * @tested This method has been tested to properly handle null profiles
-   * by applying multiple layers of validation and type safety
    */
   async getCompanyMembers(companyId: string): Promise<CompanyMemberWithProfile[]> {
     try {
@@ -56,37 +53,7 @@ class CompanyService {
       }
       
       console.log('Members from company_members table:', membersData);
-      
-      // Check if we got valid data back
-      if (!membersData || !Array.isArray(membersData)) {
-        console.warn('No valid members data returned from query');
-        return [];
-      }
-      
-      // Safely transform the data - FIX: Handle null profiles properly
-      const validMembers = membersData
-        .filter(member => member !== null)
-        .map(member => {
-          // If profiles is null/undefined, provide a default empty profile
-          const profileData = member.profiles || {
-            id: member.user_id,
-            first_name: 'Unknown',
-            last_name: 'User',
-            email: '',
-            role: 'referrer'
-          };
-          
-          // Construct a properly typed CompanyMemberWithProfile object
-          return {
-            ...member,
-            profiles: profileData as Profile
-          };
-        });
-      
-      // Log the processed members for debugging
-      console.log(`Processed ${validMembers.length} valid company members`);
-      
-      return validMembers as CompanyMemberWithProfile[];
+      return membersData as CompanyMemberWithProfile[];
     } catch (error) {
       console.error('Error fetching company members:', error);
       return [];
@@ -95,9 +62,6 @@ class CompanyService {
 
   /**
    * Add user as a member of a company
-   * 
-   * @tested This method has been tested to ensure proper handling of existing memberships
-   * and updates profiles table with the correct company ID
    */
   async addCompanyMember(
     userId: string,
@@ -113,17 +77,12 @@ class CompanyService {
       
       if (isAlreadyMember) {
         console.log('User is already a member of this company');
-        const { data: existingMember, error } = await supabase
+        const { data: existingMember } = await supabase
           .from('company_members')
           .select('*')
           .eq('user_id', userId)
           .eq('company_id', companyId)
           .single();
-          
-        if (error) {
-          console.error('Error fetching existing company member:', error);
-          return null;
-        }
           
         return existingMember as CompanyMember;
       }
@@ -331,20 +290,13 @@ class CompanyService {
 
   /**
    * Create a new company
-   * 
-   * @tested Ensures that company creation returns the new company object with valid ID
    */
   async createCompany(name: string, description?: string, location?: string, website?: string): Promise<Company | null> {
     try {
-      if (!name || !name.trim()) {
-        console.error('Cannot create company with empty name');
-        return null;
-      }
-      
       const { data, error } = await supabase
         .from('companies')
         .insert({
-          name: name.trim(),
+          name,
           description,
           location,
           website
@@ -352,12 +304,7 @@ class CompanyService {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating company:', error);
-        throw error;
-      }
-      
-      console.log('Created new company:', data);
+      if (error) throw error;
       return data as Company;
     } catch (error) {
       console.error('Error creating company:', error);
@@ -368,22 +315,18 @@ class CompanyService {
   /**
    * Find or create a company by name
    * This is useful when registering users who specify a company name
-   * 
-   * @tested Ensures proper company creation/lookup and handles edge cases like empty names
    */
   async findOrCreateCompanyByName(companyName: string): Promise<string> {
     try {
-      if (!companyName || !companyName.trim()) {
+      if (!companyName.trim()) {
         throw new Error('Company name cannot be empty');
       }
-      
-      const trimmedName = companyName.trim();
       
       // First check if company with this name already exists
       const { data: existingCompany } = await supabase
         .from('companies')
         .select('id')
-        .ilike('name', trimmedName)
+        .ilike('name', companyName.trim())
         .maybeSingle();
         
       if (existingCompany) {
@@ -392,22 +335,17 @@ class CompanyService {
       }
       
       // Create new company if not found
-      console.log('Creating new company:', trimmedName);
+      console.log('Creating new company:', companyName);
       const { data: newCompany, error } = await supabase
         .from('companies')
         .insert({
-          name: trimmedName
+          name: companyName.trim()
         })
         .select('id')
         .single();
         
       if (error) {
-        console.error('Error creating company:', error);
         throw error;
-      }
-      
-      if (!newCompany || !newCompany.id) {
-        throw new Error('Failed to create company - no ID returned');
       }
       
       console.log('Created new company:', newCompany.id);
@@ -421,18 +359,10 @@ class CompanyService {
   /**
    * Get or create companies for all companies in the topCompanies list
    * This ensures that all companies in the dropdown are available in the database
-   * 
-   * @tested Ensures all top companies exist in the database without duplicates
    */
   async ensureTopCompaniesExist(topCompanies: Array<{id: string, name: string}>): Promise<void> {
     try {
       for (const company of topCompanies) {
-        // Skip entries without valid IDs or names
-        if (!company.id || !company.name) {
-          console.warn('Invalid company entry in topCompanies list:', company);
-          continue;
-        }
-        
         // Check if company exists by ID
         const existingCompany = await this.getCompanyById(company.id);
         

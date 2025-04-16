@@ -16,14 +16,11 @@ import { companyService } from "@/services/companyService";
 import Dashboard from './pages/Dashboard';
 import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 function App() {
-  const { user, session, fetchProfile } = useAuth();
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Add this useEffect to sync company data and check auth status on app initialization
+  // Add this useEffect to sync company data on app initialization
   useEffect(() => {
     const syncCompanyData = async () => {
       try {
@@ -35,26 +32,10 @@ function App() {
       }
     };
     
-    // If we have a user, sync company data
     if (user) {
       syncCompanyData();
     }
-    
-    // Check and refresh session if needed
-    const checkSession = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (currentSession && currentSession.user && (!session || session.expires_at !== currentSession.expires_at)) {
-          console.log("Session refresh needed, updating user data");
-          await fetchProfile(currentSession.user.id);
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-      }
-    };
-    
-    checkSession();
-  }, [user, session, fetchProfile]);
+  }, [user]);
 
   return (
     <Router>

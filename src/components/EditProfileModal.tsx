@@ -31,7 +31,26 @@ const EditProfileModal = ({
   const { toast } = useToast();
   const { user, fetchProfile } = useAuth();
   const isMobile = useIsMobile();
-  const [formData, setFormData] = useState<Partial<Profile>>({});
+  const [formData, setFormData] = useState<Partial<Profile>>({
+    first_name: "",
+    last_name: "",
+    bio: "",
+    location: "",
+    company: "",
+    job_title: "",
+    department: "",
+    years_experience: "",
+    education: "",
+    skills: "",
+    languages: "",
+    interests: "",
+    linkedin_url: "",
+    github_url: "",
+    twitter_url: "",
+    website_url: "",
+    available_for_referrals: false,
+    open_to_work: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   const [previousCompany, setPreviousCompany] = useState<string | undefined>(undefined);
@@ -128,19 +147,13 @@ const EditProfileModal = ({
       
       // If this is a custom company, create or find it first
       if (showCustomCompany && customCompany) {
-        try {
-          finalCompanyId = await companyService.findOrCreateCompanyByName(customCompany);
-          console.log('Company created/found with ID:', finalCompanyId);
-          
-          // Update formData with the new company ID
-          setFormData(prev => ({
-            ...prev,
-            company: finalCompanyId
-          }));
-        } catch (error) {
-          console.error('Error finding/creating company:', error);
-          throw new Error('Failed to process company information');
-        }
+        finalCompanyId = await companyService.findOrCreateCompanyByName(customCompany);
+        
+        // Update formData with the new company ID
+        setFormData(prev => ({
+          ...prev,
+          company: finalCompanyId
+        }));
       }
       
       // First call the onSave prop for backward compatibility
@@ -178,9 +191,6 @@ const EditProfileModal = ({
               );
             }
           }
-          
-          // Force a sync of profiles with company_members
-          await companyService.syncProfilesWithCompanyMembers();
           
           // Update previous company for next time
           setPreviousCompany(finalCompanyId);
