@@ -1,6 +1,7 @@
 
 import { supabase } from "./client";
 import { topCompanies } from "@/data/topCompanies";
+import { v4 as uuidv4 } from 'uuid';
 
 export const seedCompaniesIfNeeded = async () => {
   // Check if companies already exist
@@ -75,6 +76,7 @@ export const seedTestReferrersIfNeeded = async () => {
   // Create some test referrers with various profiles
   const testReferrers = [
     {
+      id: uuidv4(), // Generate a UUID for each referrer
       first_name: "Alex",
       last_name: "Smith",
       role: "referrer",
@@ -90,6 +92,7 @@ export const seedTestReferrersIfNeeded = async () => {
       languages: "English, Spanish"
     },
     {
+      id: uuidv4(),
       first_name: "Jamie",
       last_name: "Wong",
       role: "referrer",
@@ -105,6 +108,7 @@ export const seedTestReferrersIfNeeded = async () => {
       languages: "English, Mandarin"
     },
     {
+      id: uuidv4(),
       first_name: "Taylor",
       last_name: "Johnson",
       role: "referrer",
@@ -120,6 +124,7 @@ export const seedTestReferrersIfNeeded = async () => {
       languages: "English"
     },
     {
+      id: uuidv4(),
       first_name: "Morgan",
       last_name: "Patel",
       role: "referrer",
@@ -135,6 +140,7 @@ export const seedTestReferrersIfNeeded = async () => {
       languages: "English, Hindi"
     },
     {
+      id: uuidv4(),
       first_name: "Jordan",
       last_name: "Garcia",
       role: "referrer",
@@ -164,7 +170,7 @@ export const seedTestReferrersIfNeeded = async () => {
       await supabase
         .from('company_members')
         .insert({
-          user_id: referrer.email, // In a real app, this would be the user ID
+          user_id: referrer.id,
           company_id: referrer.company,
           job_title: referrer.job_title,
           department: referrer.department

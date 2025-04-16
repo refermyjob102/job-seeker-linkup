@@ -34,6 +34,7 @@ export interface Company {
   description?: string;
   website?: string;
   location?: string;
+  sector?: string;
   created_at: string;
 }
 
