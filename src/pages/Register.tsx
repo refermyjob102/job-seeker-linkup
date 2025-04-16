@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -12,14 +11,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Briefcase, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { topCompanies } from "@/data/topCompanies";
 
 const Register = () => {
   const location = useLocation();
@@ -35,29 +33,10 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [company, setCompany] = useState("");
-  const [customCompany, setCustomCompany] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showCustomCompany, setShowCustomCompany] = useState(false);
   
   const isReferrer = role === "referrer";
-
-  // Prepare company options from topCompanies with "Others" option
-  const companyOptions = [
-    ...topCompanies.map((company) => ({
-      label: company.name,
-      value: company.id,
-    })),
-    { label: "Others", value: "others" }
-  ];
-
-  const handleCompanyChange = (value: string) => {
-    setCompany(value);
-    setShowCustomCompany(value === "others");
-    if (value !== "others") {
-      setCustomCompany("");
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,27 +49,14 @@ const Register = () => {
       });
       return;
     }
-
-    // Determine the company value to send
-    const companyValue = company === "others" ? customCompany : company;
-    
-    if (isReferrer && company === "others" && !customCompany.trim()) {
-      toast({
-        title: "Company Required",
-        description: "Please enter your company name.",
-        variant: "destructive",
-      });
-      return;
-    }
     
     try {
-      console.log('Submitting registration with company:', companyValue);
       await register({
         first_name: firstName,
         last_name: lastName,
         email,
         role,
-        company: isReferrer ? companyValue : undefined,
+        company: isReferrer ? company : undefined,
         jobTitle: isReferrer ? jobTitle : undefined,
       }, password);
       
@@ -193,6 +159,7 @@ const Register = () => {
                       setPassword(e.target.value);
                       clearError();
                     }}
+                    showPasswordToggle
                   />
                 </div>
                 
@@ -200,36 +167,14 @@ const Register = () => {
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="company">Company</Label>
-                      <Select 
+                      <Input 
+                        id="company" 
+                        placeholder="Google, Meta, etc." 
+                        required={isReferrer} 
                         value={company}
-                        onValueChange={handleCompanyChange}
-                        required={isReferrer}
-                      >
-                        <SelectTrigger id="company" className="w-full">
-                          <SelectValue placeholder="Select a company" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {companyOptions.map((companyOption) => (
-                            <SelectItem key={companyOption.value} value={companyOption.value}>
-                              {companyOption.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onChange={(e) => setCompany(e.target.value)}
+                      />
                     </div>
-                    
-                    {showCustomCompany && (
-                      <div className="space-y-2">
-                        <Label htmlFor="customCompany">Company Name</Label>
-                        <Input 
-                          id="customCompany" 
-                          placeholder="Enter your company name" 
-                          required={showCustomCompany}
-                          value={customCompany}
-                          onChange={(e) => setCustomCompany(e.target.value)}
-                        />
-                      </div>
-                    )}
                     
                     <div className="space-y-2">
                       <Label htmlFor="jobTitle">Job Title</Label>

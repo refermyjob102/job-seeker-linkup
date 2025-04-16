@@ -1,51 +1,83 @@
 
 export interface Profile {
   id: string;
-  first_name?: string;
-  last_name?: string;
+  first_name: string;
+  last_name: string;
+  role: 'seeker' | 'referrer';
   email: string;
   avatar_url?: string;
-  bio?: string;
+  resume_url?: string;
   location?: string;
-  company?: string;
+  bio?: string;
   job_title?: string;
   department?: string;
-  role: 'seeker' | 'referrer';
-  created_at?: string;
-  updated_at?: string;
-  available_for_referrals?: boolean;
+  years_experience?: string;
   education?: string;
   skills?: string;
-  interests?: string;
   languages?: string;
+  interests?: string;
   linkedin_url?: string;
   github_url?: string;
   twitter_url?: string;
   website_url?: string;
-  years_experience?: string;
+  available_for_referrals?: boolean;
   open_to_work?: boolean;
+  company?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Company {
   id: string;
   name: string;
   logo_url?: string;
-  location?: string;
-  website?: string;
   description?: string;
-  created_at?: string;
+  website?: string;
+  location?: string;
+  created_at: string;
 }
 
 export interface CompanyMember {
   id: string;
-  user_id: string;
   company_id: string;
+  user_id: string;
   job_title: string;
   department?: string;
   joined_at: string;
 }
 
-// This extends the CompanyMember to include the profile data
-export interface CompanyMemberWithProfile extends CompanyMember {
-  profiles: Profile;
+export interface Skill {
+  id: string;
+  name: string;
+  category: string;
+}
+
+export interface Referral {
+  id: string;
+  company_id: string;
+  position: string;
+  seeker_id: string;
+  referrer_id: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'needs_info';
+  resume_url?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobListing {
+  id: string;
+  company_id: string;
+  title: string;
+  description: string;
+  requirements: string[];
+  responsibilities: string[];
+  location: string;
+  salary_min?: number;
+  salary_max?: number;
+  type: string;
+  experience_level: string;
+  created_at: string;
+  expires_at?: string;
+  status: 'active' | 'filled' | 'expired';
 }
